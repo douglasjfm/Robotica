@@ -1,0 +1,67 @@
+# depslib dependency file v1.0
+1460127063 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/ddRobot.cpp
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	<string>
+	<unistd.h>
+	"remoteApi/extApi.h"
+	"include/v_repConst.h"
+	"remoteApi/extApiPlatform.h"
+
+1460126270 /home/douglas/Documentos/robotica/Atividade1/ddRobo/remoteApi/extApi.h
+	"extApiPlatform.h"
+	"../include/v_repConst.h"
+
+1460127003 /home/douglas/Documentos/robotica/Atividade1/ddRobo/remoteApi/extApiPlatform.h
+	<stdint.h>
+
+1422952084 /home/douglas/Documentos/robotica/Atividade1/ddRobo/include/v_repConst.h
+
+1460122569 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/extApi.c
+	<extApi.h>
+	<extApiInternal.h>
+	<v_repConst.h>
+	<stdio.h>
+	"extApiJava.h"
+
+1460125299 /home/douglas/Documentos/robotica/Atividade1/ddRobo/remoteApi/extApiInternal.h
+	"extApiPlatform.h"
+
+1460123851 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/extApiPlatform.c
+	<extApiPlatform.h>
+	<extApiInternal.h>
+	<stdio.h>
+	<Windows.h>
+	<process.h>
+	<pthread.h>
+	<stdlib.h>
+	<unistd.h>
+	<string.h>
+	<netinet/in.h>
+	<sys/time.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<netdb.h>
+
+1422952084 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/remoteApi/extApi.c
+	"extApi.h"
+	"extApiInternal.h"
+	<stdio.h>
+	"extApiJava.h"
+
+1460125937 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/remoteApi/extApiPlatform.c
+	"extApiPlatform.h"
+	<stdio.h>
+	<Windows.h>
+	<process.h>
+	<pthread.h>
+	<stdlib.h>
+	<unistd.h>
+	<string.h>
+	<netinet/in.h>
+	<sys/time.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<netdb.h>
+
