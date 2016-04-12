@@ -23,7 +23,7 @@
 #include "remoteApi/extApi.h"
 #include "include/v_repConst.h"
 #include "remoteApi/extApiPlatform.h"
-    /*	#include "extApiCustom.h" if you wanna use custom remote API functions! */
+/*	#include "extApiCustom.h" if you wanna use custom remote API functions! */
 
 
 simxInt ddRobotHandle;
@@ -31,18 +31,24 @@ simxInt leftMotorHandle;
 simxInt rightMotorHandle;
 simxInt sensorHandle;
 simxInt graphOdometryHandle;
+simxInt caminhoHandle;
+simxInt pathPlanTaskHandle;
+simxInt fimHandle;
 
-void getPosition(int clientID, simxFloat pos[]) { //[x,y,theta]
+void getPosition(int clientID, simxFloat pos[])   //[x,y,theta]
+{
 
     simxInt ret = simxGetObjectPosition(clientID, ddRobotHandle, -1, pos, simx_opmode_oneshot_wait);
-    if (ret > 0) {
+    if (ret > 0)
+    {
         printf("Error reading robot position\n");
         return;
     }
 
     simxFloat orientation[3];
     ret = simxGetObjectOrientation(clientID, ddRobotHandle, -1, orientation, simx_opmode_oneshot_wait);
-    if (ret > 0) {
+    if (ret > 0)
+    {
         printf("Error reading robot orientation\n");
         return;
     }
@@ -51,32 +57,40 @@ void getPosition(int clientID, simxFloat pos[]) { //[x,y,theta]
     pos[2] = theta;
 }
 
-simxInt getSimTimeMs(int clientID) { //In Miliseconds
+simxInt getSimTimeMs(int clientID)   //In Miliseconds
+{
     return simxGetLastCmdTime(clientID);
 }
 
-float to_positive_angle(float angle) {
+float to_positive_angle(float angle)
+{
 
     angle = fmod(angle, 2 * M_PI);
-    while (angle < 0) {
+    while (angle < 0)
+    {
         angle = angle + 2 * M_PI;
     }
     return angle;
 }
 
-float smallestAngleDiff(float target, float source) {
+float smallestAngleDiff(float target, float source)
+{
     float a;
     a = to_positive_angle(target) - to_positive_angle(source);
 
-    if (a > M_PI) {
+    if (a > M_PI)
+    {
         a = a - 2 * M_PI;
-    } else if (a < -M_PI) {
+    }
+    else if (a < -M_PI)
+    {
         a = a + 2 * M_PI;
     }
     return a;
 }
 
-void readOdometers(int clientID, simxFloat &dPhiL, simxFloat &dPhiR) {
+void readOdometers(int clientID, simxFloat &dPhiL, simxFloat &dPhiR)
+{
     //old joint angle position
     static simxFloat lwprev=0;
     static simxFloat rwprev=0;
@@ -94,45 +108,55 @@ void readOdometers(int clientID, simxFloat &dPhiL, simxFloat &dPhiR) {
     rwprev = rwcur;
 }
 
-void setTargetSpeed(int clientID, simxFloat phiL, simxFloat phiR) {
+void setTargetSpeed(int clientID, simxFloat phiL, simxFloat phiR)
+{
     simxSetJointTargetVelocity(clientID, leftMotorHandle, phiL, simx_opmode_oneshot);
     simxSetJointTargetVelocity(clientID, rightMotorHandle, phiR, simx_opmode_oneshot);
 }
 
-inline double to_deg(double radians) {
+inline double to_deg(double radians)
+{
     return radians * (180.0 / M_PI);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
 
-    std::string ipAddr = V_REP_IP_ADDRESS;
+    char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT;
 
-    if (argc > 1) {
+    if (argc > 1)
+    {
         ipAddr = argv[1];
     }
 
-    printf("Iniciando conexao com: %s...\n", ipAddr.c_str());
+    printf("Iniciando conexao com: %s...\n", ipAddr);
 
-    int clientID = simxStart((simxChar*) (simxChar*) ipAddr.c_str(), portNb, true, true, 2000, 5);
-    if (clientID != -1) {
+    int clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
+    if (clientID != -1)
+    {
         printf("Conexao efetuada\n");
 
         //Get handles for robot parts, actuators and sensores:
         simxGetObjectHandle(clientID, "RobotFrame#", &ddRobotHandle, simx_opmode_oneshot_wait);
         simxGetObjectHandle(clientID, "LeftMotor#", &leftMotorHandle, simx_opmode_oneshot_wait);
         simxGetObjectHandle(clientID, "RightMotor#", &rightMotorHandle, simx_opmode_oneshot_wait);
-        simxGetObjectHandle(clientID, "GraphOdometry#", &graphOdometryHandle, simx_opmode_oneshot_wait);
+        simxGetObjectHandle(clientID, "Graph#", &graphOdometryHandle, simx_opmode_oneshot_wait);
+        simxGetObjectHandle(clientID, "Caminho#", &caminhoHandle, simx_opmode_oneshot_wait);
+        simxGetObjectHandle(clientID, "Fim#", &fimHandle, simx_opmode_oneshot_wait);
 
         printf("RobotFrame: %d\n", ddRobotHandle);
         printf("LeftMotor: %d\n", leftMotorHandle);
         printf("RightMotor: %d\n", rightMotorHandle);
         printf("GraphOdometry: %d\n", graphOdometryHandle);
-
+        printf("Caminho: %d\n", caminhoHandle);
+        printf("Fim: %d\n", fimHandle);
+        simxGetObjectPositio
         //start simulation
         int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
 
-        if (ret==-1) {
+        if (ret==-1)
+        {
             printf("Não foi possível iniciar a simulação.\n");
             return -1;
         }
@@ -140,7 +164,8 @@ int main(int argc, char* argv[]) {
         printf("Simulação iniciada.\n");
 
         //While is connected:
-        while (simxGetConnectionId(clientID) != -1) {
+        while (simxGetConnectionId(clientID) != -1)
+        {
 
             //Read current position:
             simxFloat pos[3]; //[x,y,theta] in [cm cm rad]
@@ -171,7 +196,9 @@ int main(int argc, char* argv[]) {
         simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
         simxFinish(clientID);
 
-    } else {
+    }
+    else
+    {
         printf("Nao foi possivel conectar.\n");
         return -2;
     }
