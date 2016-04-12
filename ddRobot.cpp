@@ -124,6 +124,7 @@ int main(int argc, char* argv[])
 
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT;
+    float goal[3];
 
     if (argc > 1)
     {
@@ -151,8 +152,18 @@ int main(int argc, char* argv[])
         printf("GraphOdometry: %d\n", graphOdometryHandle);
         printf("Caminho: %d\n", caminhoHandle);
         printf("Fim: %d\n", fimHandle);
-        simxGetObjectPositio
+        //simxReadStringStream()
         //start simulation
+
+//        printf("Digite Goal x: ");
+//        scanf("%f",&goal[0]);
+//        printf("Digite Goal y: ");
+//        scanf("%f",&goal[1]);
+//        printf("Digite Goal theta: ");
+//        scanf("%f",&goal[2]);
+
+        simxSetObjectPosition(clientID,fimHandle,-1,goal,simx_opmode_oneshot_wait);
+
         int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
 
         if (ret==-1)
