@@ -119,12 +119,28 @@ inline double to_deg(double radians)
     return radians * (180.0 / M_PI);
 }
 
+int droppoint (simxUChar *p, float *x, float *y, float *z)
+{
+    int i=0;
+    while(p[i] != '|' && p[i] != '\0') i++;
+    if (p[i] == '\0') return 0;
+    p[i] = '\0';
+    sscanf(p,"%f,%f,%f",x,y,z);
+    i++;
+    strcpy(p,p+i);
+    return 1;
+}
+
 int main(int argc, char* argv[])
 {
 
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT;
     float goal[3];
+    int i;
+
+    simxUChar *outbuf,*p;
+    simxInt outbuflen;
 
     if (argc > 1)
     {
@@ -152,7 +168,7 @@ int main(int argc, char* argv[])
         printf("GraphOdometry: %d\n", graphOdometryHandle);
         printf("Caminho: %d\n", caminhoHandle);
         printf("Fim: %d\n", fimHandle);
-        //simxReadStringStream()
+
         //start simulation
 
 //        printf("Digite Goal x: ");
@@ -161,8 +177,6 @@ int main(int argc, char* argv[])
 //        scanf("%f",&goal[1]);
 //        printf("Digite Goal theta: ");
 //        scanf("%f",&goal[2]);
-
-        simxSetObjectPosition(clientID,fimHandle,-1,goal,simx_opmode_oneshot_wait);
 
         int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
 
@@ -174,32 +188,17 @@ int main(int argc, char* argv[])
 
         printf("Simulação iniciada.\n");
 
+        ///Chamda da função que calcula o trajeto
+        outbuf = (simxUChar*) malloc(10240);
+        simxQuery(clientID,"getpoints",(const simxUChar*)"ok",2,"pontos",&outbuf,&outbuflen,2000);
+
         //While is connected:
-        while (simxGetConnectionId(clientID) != -1)
+        i = 0;
+        p = outbuf;
+        while (simxGetConnectionId(clientID) != -1 && i < outbuflen)
         {
-
-            //Read current position:
-            simxFloat pos[3]; //[x,y,theta] in [cm cm rad]
-            getPosition(clientID, pos);
-
-            //Read simulation time of the last command:
-            simxInt time = getSimTimeMs(clientID); //Simulation time in ms or 0 if sim is not running
-            //stop the loop if simulation is has been stopped:
-            if (time == 0) break;
-            printf("Posicao: [%.2f %.2f %.2fº], time: %dms\n", pos[0], pos[1], to_deg(pos[2]), time);
-
-            //Read current wheels angle variation:
-            simxFloat dPhiL, dPhiR; //rad
-            readOdometers(clientID, dPhiL, dPhiR);
-            printf("dPhiL: %.2f dPhiR: %.2f\n", dPhiL, dPhiR);
-
-            //Set new target speeds: robot going in a circle:
-            simxFloat phiL = 5; //rad/s
-            simxFloat phiR = 20; //rad/s
-            setTargetSpeed(clientID, phiL, phiR);
-
-            //Let some time for V-REP do its work:
-            extApi_sleepMs(2);
+            float ddpos[3];
+            simxGetObjectPosition(clientID,ddRobotHandle,-1,ddpos,simx_opmode_oneshot_wait);
         }
 
         //Stop the robot and disconnect from V-Rep;

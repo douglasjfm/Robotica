@@ -65,3 +65,46 @@
 	<arpa/inet.h>
 	<netdb.h>
 
+1460660297 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
+	"extApi.h"
+	"extApiInternal.h"
+	<stdio.h>
+	"extApiJava.h"
+
+1460660297 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
+	"extApiPlatform.h"
+	"../include/v_repConst.h"
+
+1460660297 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
+	<stdint.h>
+
+1460660297 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
+
+1460660297 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
+	"extApiPlatform.h"
+
+1460660297 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
+	"extApiPlatform.h"
+	<stdio.h>
+	<Windows.h>
+	<process.h>
+	<pthread.h>
+	<stdlib.h>
+	<unistd.h>
+	<string.h>
+	<netinet/in.h>
+	<sys/time.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<netdb.h>
+
+1460664532 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	<string>
+	<unistd.h>
+	"remoteApi/extApi.h"
+	"include/v_repConst.h"
+	"remoteApi/extApiPlatform.h"
+
