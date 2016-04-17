@@ -14,7 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <string>
+#include <string.h>
 #include <unistd.h>
 
 #define V_REP_IP_ADDRESS "127.0.0.1"
@@ -25,7 +25,7 @@
 #include "remoteApi/extApiPlatform.h"
 /*	#include "extApiCustom.h" if you wanna use custom remote API functions! */
 
-
+int clientID;
 simxInt ddRobotHandle;
 simxInt leftMotorHandle;
 simxInt rightMotorHandle;
@@ -119,25 +119,37 @@ inline double to_deg(double radians)
     return radians * (180.0 / M_PI);
 }
 
-int droppoint (simxUChar *p, float *x, float *y, float *z)
+simxUChar* droppoint (simxUChar *p, float *x, float *y, float *z)
 {
     int i=0;
-    while(p[i] != '|' && p[i] != '\0') i++;
-    if (p[i] == '\0') return 0;
+    if (p[i] == '\0') return NULL;
+    while(p[i] != '|' && p[i] != '\0')
+    {
+        if (p[i] == ',')
+            p[i] = '.';
+        i++;
+    }
     p[i] = '\0';
-    sscanf(p,"%f,%f,%f",x,y,z);
+    sscanf((const char*)p,"%f;%f",x,y);
     i++;
-    strcpy(p,p+i);
-    return 1;
+    p = p+i;
+    return p;
+}
+
+float trans_get_phi (float x, float y, float t, float x1, float y1);
+
+float calcphi (float xyt[3], float pxy[3])
+{
+    return trans_get_phi(xyt[0],xyt[1],xyt[2],pxy[0],pxy[1]);
 }
 
 int main(int argc, char* argv[])
 {
 
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
-    int portNb = V_REP_PORT;
+    int portNb = V_REP_PORT,c=0;
     float goal[3];
-    int i;
+    float ddpos[3],cam_pos[3];
 
     simxUChar *outbuf,*p;
     simxInt outbuflen;
@@ -149,7 +161,7 @@ int main(int argc, char* argv[])
 
     printf("Iniciando conexao com: %s...\n", ipAddr);
 
-    int clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
+    clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
     if (clientID != -1)
     {
         printf("Conexao efetuada\n");
@@ -171,12 +183,14 @@ int main(int argc, char* argv[])
 
         //start simulation
 
-//        printf("Digite Goal x: ");
-//        scanf("%f",&goal[0]);
-//        printf("Digite Goal y: ");
-//        scanf("%f",&goal[1]);
-//        printf("Digite Goal theta: ");
-//        scanf("%f",&goal[2]);
+        printf("Digite o Goal x [-2,2]: ");
+        scanf("%f",&goal[0]);
+        printf("Digite Goal y [-2,2]: ");
+        scanf("%f",&goal[1]);
+        printf("Digite Goal theta [0,2*PI]: ");
+        scanf("%f",&goal[2]);
+
+        simxSetObjectPosition(clientID,fimHandle,-1,goal,simx_opmode_oneshot_wait);
 
         int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
 
@@ -188,24 +202,49 @@ int main(int argc, char* argv[])
 
         printf("Simulação iniciada.\n");
 
-        ///Chamda da função que calcula o trajeto
-        outbuf = (simxUChar*) malloc(10240);
+        ///Chamada da função que calcula o trajeto
         simxQuery(clientID,"getpoints",(const simxUChar*)"ok",2,"pontos",&outbuf,&outbuflen,2000);
 
         //While is connected:
-        i = 0;
-        p = outbuf;
-        while (simxGetConnectionId(clientID) != -1 && i < outbuflen)
-        {
-            float ddpos[3];
-            simxGetObjectPosition(clientID,ddRobotHandle,-1,ddpos,simx_opmode_oneshot_wait);
-        }
 
+        p = outbuf;
+        //printf("%s",p);
+        p = droppoint(p,cam_pos,&(cam_pos[1]),&(cam_pos[2]));c++;
+
+        while (simxGetConnectionId(clientID) != -1)
+        {
+            float dis,d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
+            float sinal;
+            getPosition(clientID,ddpos);
+            dis = sqrt((ddpos[0]-cam_pos[0])*(ddpos[0]-cam_pos[0]) + (ddpos[1]-cam_pos[1])*(ddpos[1]-cam_pos[1]));
+            if (dis < 0.05)
+            {
+                p = droppoint(p,cam_pos,&(cam_pos[1]),&(cam_pos[2]));
+                if (!p)
+                    break;
+                c++;
+            }
+
+            phi = calcphi(ddpos,cam_pos);
+            v_des = 0.2;
+            om_des=0.8*phi;
+            d=0.20;
+            v_r=(v_des+d*om_des);
+            v_l=(v_des-d*om_des);
+            r_w=0.0325; ///wheel radius;
+            omega_right = v_r/r_w;
+            omega_left = v_l/r_w;
+            printf("%d: %.2f %.2f %.2f %.2f %.3f %.3f\n",c,cam_pos[0],cam_pos[1],ddpos[0],ddpos[1],ddpos[2],phi);
+            //simxSetJointTargetVelocity(clientID,leftMotorHandle,omega_left,simx_opmode_oneshot_wait);
+            //simxSetJointTargetVelocity(clientID,rightMotorHandle,omega_right,simx_opmode_oneshot_wait);
+            setTargetSpeed(clientID,-omega_left,-omega_right);
+        }
+        printf("fim da simulação\n");
         //Stop the robot and disconnect from V-Rep;
         setTargetSpeed(clientID, 0, 0);
         simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
+        //simxStopSimulation(clientID,simx_opmode_oneshot_wait);
         simxFinish(clientID);
-
     }
     else
     {

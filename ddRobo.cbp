@@ -31,11 +31,13 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add directory="/usr/include/gsl" />
 		</Compiler>
 		<Linker>
-			<Add option="-pthread" />
+			<Add option="-pthread -lgsl -lgslcblas" />
 		</Linker>
 		<Unit filename="ddRobot.cpp" />
+		<Unit filename="kinem.cpp" />
 		<Unit filename="remoteApi/extApi.c">
 			<Option compilerVar="CC" />
 		</Unit>

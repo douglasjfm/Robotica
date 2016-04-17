@@ -1,9 +1,9 @@
 # depslib dependency file v1.0
-1460462015 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/ddRobot.cpp
+1460855536 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
-	<string>
+	<string.h>
 	<unistd.h>
 	"remoteApi/extApi.h"
 	"include/v_repConst.h"
@@ -107,4 +107,12 @@
 	"remoteApi/extApi.h"
 	"include/v_repConst.h"
 	"remoteApi/extApiPlatform.h"
+
+1460855268 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/kinem.cpp
+	<math.h>
+	<gsl/gsl_matrix.h>
+	<gsl/gsl_vector.h>
+	<gsl/gsl_blas.h>
+	<gsl/gsl_permutation.h>
+	<gsl/gsl_linalg.h>
 
