@@ -1,0 +1,39 @@
+Prazo: 10/05
+Será descontado 1pt por dia de atraso.
+Manter as equipes anteriores com 4 integrantes
+
+Descrição da Atividade:
+
+A atividade consiste em desenvolver um reconhecedor de objetos em imagens.
+O reconhecedor deve funcionar da seguinte maneira:
+
+Parte 1: Treinamento:
+
+    Os objetos são mostrados um a um para o sistema de vários ângulos. Pode-se colocar um fundo branco/preto/uniforme atrás para que o sistema “veja” apenas o objeto. O sistema deve então criar uma representação interna deste objeto que permita reconhece-lo posteriormente. Um nome deve ser fornecido para cada objeto treinado e mantido em sua representação.
+
+    O treinamento não precisa ser online, podem ser utilizadas imagens estáticas (fotos) dos objetos para o treinamento, se assim a equipe preferir.
+
+Parte 2: Testes:
+
+   O reconhecimento dos objetos consiste em criar um sistema online que identifique em tempo real o objeto que está em uma streaming de vídeo de uma webcam. O background não será controlado durante os testes, podendo conter outros objetos (não os mesmos da atividade) e pessoas. Quando nenhum dos cinco objetos estiver na visão da câmera, o sistema deve apresentar simplesmente a mensagem “Nenhum objeto reconhecido”.
+
+   Ao apresentar 1 (um) objeto por vez na webcam, o reconhecedor deve ser capaz de:
+   a) Exibir na tela o nome do objeto reconhecido.
+   b) Indicar na tela (desenhar um círculo) na posição central do objeto na tela.
+
+Pontuação:
+
+  Serão apresentados 5 objetos distintos para o reconhecedor. Serão atribuídos:
+  a) 1pt - para cada objeto que o reconhecedor for capaz de indicar o nome corretamente.
+  b) 1pt - para cada objeto que o reconhecedor for capaz de indicar a posição central na tela corretamente.
+  c) Será atribuído 1pt extra para as equipes que forem capazes de obter um framerate acima de 20fps.
+  d) Descontos: durante os testes dos cinco objetos treinados, serão apresentados dois objetos (distraidores) que não estavam no conjunto de treinamento. O sistema deve apresentar a mensagem “Nenhum objeto reconhecido” quando estes objetos forem apresentados no campo de visão da câmera. Será descontado 1pt por cada distraidor reconhecido indevidamente como um dos objetos de treinamento.
+
+A biblioteca recomendada é a OpenCV (inclusa no OS fornecido do Rasberry Pi): 
+Download: http://opencv.org/downloads.html
+
+Porém, pode-se utilizar qualquer biblioteca que funcione em linux. Posteriormente, o código que feito deverá funcionar no Raspberry Pi. Caso seja necessário instalar algo a mais no sistema, a instalação será de responsabilidade da equipe.
+
+Obs. As equipes podem escolher os 5 objetos de treinamento que serão utilizarão na atividade, porém, caso eu considere os objetos exageradamente distintos para facilitar o reconhecimento (ex.: cada um de uma cor), serão fornecidos outros objetos escolhidos por mim para novo treinamento e teste e a nota será atribuída com base nos resultados obtidos com este novo conjunto de objetos. 
+
+
