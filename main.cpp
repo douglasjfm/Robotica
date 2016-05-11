@@ -1,5 +1,5 @@
 #include "ImagemStr.h"
-#define THRES_MATCHES 0.8
+#define THRES_MATCHES 0.01
 /**
  * @function main
  * @brief Main function
@@ -71,7 +71,7 @@ int main(int argc, char** argv)
         tot = 0;
         for( int j = 0; j < treino[i].des.rows; j++ )
         {
-            if( matches[j].distance <= max(2*min_dist, 0.02))
+            if( matches[j].distance <= max(2.5*min_dist, 0.02))
             {
                 gmatches.push_back( matches[j]);
                 mx += fkp[matches[j].trainIdx].pt.x;
@@ -79,13 +79,15 @@ int main(int argc, char** argv)
                 tot++;
             }
         }
-        good_ratio = gmatches.size()/matches.size();
-//        drawMatches( treino[i].m, treino[i].kps, frame, fkp,
-//                     gmatches, match, Scalar::all(-1), Scalar::all(-1),
-//                     vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-        center.x = mx/tot;
-        center.y = my/tot;
-        circle(frame,center,50,Scalar(255,0,0),1,8,0);
+        good_ratio = (double)gmatches.size()/matches.size();
+        //if (good_ratio > THRES_MATCHES)
+        //{
+            center.x = mx/tot;
+            center.y = my/tot;
+            circle(frame,center,50,Scalar(255,0,0),1,8,0);
+            putText(frame, treino[i].nome, center, FONT_HERSHEY_SIMPLEX, 1.0,255);
+        //}
+        //printf("%lf\n",good_ratio);
         imshow("CV",frame);
         if(waitKey(30) >= 0) break;
         gmatches.clear();

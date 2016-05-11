@@ -20,7 +20,7 @@ class ImagemStr
     public:
         Mat m;
         Mat des;
-        char *nome;
+        char* nome;
         std::vector<KeyPoint> kps;
         ImagemStr(Mat mtx, char* nm, std::vector<KeyPoint> k, Mat d);
         virtual ~ImagemStr();
