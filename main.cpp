@@ -1,5 +1,5 @@
 #include "ImagemStr.h"
-
+#define THRES_MATCHES 0.8
 /**
  * @function main
  * @brief Main function
@@ -15,13 +15,21 @@ int main(int argc, char** argv)
     VideoCapture cap(0);
     std::vector<KeyPoint> fkp;
     Mat fdesc;
+    double good_ratio;
 
     int minHessian = 400;
     SurfFeatureDetector detector(minHessian);
     SurfDescriptorExtractor extractor;
 
     FlannBasedMatcher matcher;
-    std::vector< DMatch > matches;
+    std::vector< DMatch > matches, gmatches;
+
+
+    double max_dist = 0;
+    double min_dist = 100;
+    double mx,my;
+    int tot;
+    CvPoint center;
 
     ///Le as imagens do treino
 
@@ -47,12 +55,10 @@ int main(int argc, char** argv)
     for(;;)
     {
         cap >> frame;
+        cvtColor(frame, frame, CV_BGR2GRAY);
         detector.detect(frame,fkp);
         extractor.compute(frame,fkp,fdesc);
         matcher.match(treino[i].des, fdesc, matches);
-
-        double max_dist = 0;
-        double min_dist = 100;
 
         //-- Quick calculation of max and min distances between keypoints
         for( int j = 0; j < treino[i].des.rows; j++ )
@@ -61,13 +67,37 @@ int main(int argc, char** argv)
             if( dist < min_dist ) min_dist = dist;
             if( dist > max_dist ) max_dist = dist;
         }
-        i = (i + 1) % num;
-        drawMatches( treino[i].m, treino[i].kps, frame, fkp,
-               matches, match, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-        imshow("CV",match);
+        mx = my = 0.0;
+        tot = 0;
+        for( int j = 0; j < treino[i].des.rows; j++ )
+        {
+            if( matches[j].distance <= max(2*min_dist, 0.02))
+            {
+                gmatches.push_back( matches[j]);
+                mx += fkp[matches[j].trainIdx].pt.x;
+                my += fkp[matches[j].trainIdx].pt.y;
+                tot++;
+            }
+        }
+        good_ratio = gmatches.size()/matches.size();
+//        drawMatches( treino[i].m, treino[i].kps, frame, fkp,
+//                     gmatches, match, Scalar::all(-1), Scalar::all(-1),
+//                     vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
+        center.x = mx/tot;
+        center.y = my/tot;
+        circle(frame,center,50,Scalar(255,0,0),1,8,0);
+        imshow("CV",frame);
         if(waitKey(30) >= 0) break;
+        gmatches.clear();
+        fkp.clear();
+        matches.clear();
+        i = (i + 1) % num;
     }
+
+    gmatches.clear();
+    matches.clear();
+    treino.clear();
+    fkp.clear();
 
     return 0;
 }
