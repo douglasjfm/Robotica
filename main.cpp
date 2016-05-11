@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     int num,i=0;
     char imgnm[50];
 
-    Mat frame, match;
+    Mat frame, match, H;
     VideoCapture cap(0);
     std::vector<KeyPoint> fkp;
     Mat fdesc;
@@ -24,6 +24,8 @@ int main(int argc, char** argv)
     FlannBasedMatcher matcher;
     std::vector< DMatch > matches, gmatches;
 
+    std::vector<Point2f> obj;
+    std::vector<Point2f> scene;
 
     double max_dist = 0;
     double min_dist = 100;
@@ -41,7 +43,6 @@ int main(int argc, char** argv)
         Mat im = imread(imgnm,CV_LOAD_IMAGE_GRAYSCALE);
         std::vector<KeyPoint> keypoints_1;
         detector.detect(im, keypoints_1);
-        //-- Step 2: Calculate descriptors (feature vectors)
         Mat descriptors_1;
         extractor.compute(im, keypoints_1, descriptors_1);
         ImagemStr *i = new ImagemStr(im,imgnm,keypoints_1,descriptors_1);
@@ -74,25 +75,47 @@ int main(int argc, char** argv)
             if( matches[j].distance <= max(2.5*min_dist, 0.02))
             {
                 gmatches.push_back( matches[j]);
-                mx += fkp[matches[j].trainIdx].pt.x;
-                my += fkp[matches[j].trainIdx].pt.y;
-                tot++;
+                //mx += fkp[matches[j].trainIdx].pt.x;
+                //my += fkp[matches[j].trainIdx].pt.y;
+                //tot++;
             }
         }
-        good_ratio = (double)gmatches.size()/matches.size();
-        //if (good_ratio > THRES_MATCHES)
-        //{
-            center.x = mx/tot;
-            center.y = my/tot;
-            circle(frame,center,50,Scalar(255,0,0),1,8,0);
-            putText(frame, treino[i].nome, center, FONT_HERSHEY_SIMPLEX, 1.0,255);
-        //}
-        //printf("%lf\n",good_ratio);
+        //good_ratio = (double)gmatches.size()/matches.size();
+
+        //-- Localize the object
+
+        for( int j = 0; j < matches.size(); j++ )
+        {
+            //-- Get the keypoints from the good matches
+            obj.push_back( treino[i].kps[ matches[j].queryIdx ].pt );
+            scene.push_back( fkp[ matches[j].trainIdx ].pt );
+        }
+
+        H = findHomography( obj, scene, CV_RANSAC );
+
+        //-- Get the corners from the image_1 ( the object to be "detected" )
+        std::vector<Point2f> obj_corners(4);
+        obj_corners[0] = cvPoint(0,0);
+        obj_corners[1] = cvPoint( treino[i].m.cols, 0 );
+        obj_corners[2] = cvPoint( treino[i].m.cols, treino[i].m.rows );
+        obj_corners[3] = cvPoint( 0, treino[i].m.rows );
+        std::vector<Point2f> scene_corners(4);
+
+        perspectiveTransform( obj_corners, scene_corners, H);
+
+        //-- Draw lines between the corners (the mapped object in the scene - image_2 )
+        line( frame, scene_corners[0] + Point2f( treino[i].m.cols, 0), scene_corners[1] + Point2f( treino[i].m.cols, 0), Scalar(0, 255, 0), 4 );
+        line( frame, scene_corners[1] + Point2f( treino[i].m.cols, 0), scene_corners[2] + Point2f( treino[i].m.cols, 0), Scalar( 0, 255, 0), 4 );
+        line( frame, scene_corners[2] + Point2f( treino[i].m.cols, 0), scene_corners[3] + Point2f( treino[i].m.cols, 0), Scalar( 0, 255, 0), 4 );
+        line( frame, scene_corners[3] + Point2f( treino[i].m.cols, 0), scene_corners[0] + Point2f( treino[i].m.cols, 0), Scalar( 0, 255, 0), 4 );
+
         imshow("CV",frame);
         if(waitKey(30) >= 0) break;
         gmatches.clear();
         fkp.clear();
         matches.clear();
+        obj.clear();
+        scene.clear();
         i = (i + 1) % num;
     }
 
