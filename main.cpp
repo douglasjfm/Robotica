@@ -1,5 +1,11 @@
 #include "ImagemStr.h"
 #define THRES_MATCHES 0.01
+#define framecountmax 0b1111111
+
+char flag_obj_track = 0;
+int track_frames_count = 0;
+char dbgmsg[100];
+
 /**
  * @function main
  * @brief Main function
@@ -102,31 +108,40 @@ int main(int argc, char** argv)
         rw = scene_corners[1].x - scene_corners[0].x;
         rl = scene_corners[2].y - scene_corners[0].y;
         //-- Draw lines between the corners (the mapped object in the scene - image_2 )
-        if(rw*rl > 400)
+        if(rw*rl > 1000 && !flag_obj_track)
         {
-            putText(display,treino[i].nome,scene_corners[0],FONT_HERSHEY_PLAIN,1.0,Scalar(0, 255, 0));
-            contaframes++;
             trackpoints.clear();
-            trackpoints.push_back(scene_corners[0] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[1] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[1] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[2] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[2] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[3] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[3] + Point2f( treino[i].m.cols, 0));
-            trackpoints.push_back(scene_corners[0] + Point2f( treino[i].m.cols, 0));
+            trackpoints.push_back(scene_corners[0] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[1] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[1] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[2] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[2] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[3] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[3] /*+ Point2f( treino[i].m.cols, 0)*/);
+            trackpoints.push_back(scene_corners[0] /*+ Point2f( treino[i].m.cols, 0)*/);
+            flag_obj_track = 1;
+            //printf("a\n");
         }
 
         if (trackpoints.size()>7)
         {
+            putText(display,treino[i].nome,scene_corners[0],FONT_HERSHEY_PLAIN,1.0,Scalar(0, 255, 0));
             line( display, trackpoints[0], trackpoints[1], Scalar(0, 255, 0), 4 );
             line( display,trackpoints[2], trackpoints[3], Scalar( 0, 255, 0), 4 );
             line( display, trackpoints[4], trackpoints[5], Scalar( 0, 255, 0), 4 );
             line( display, trackpoints[6], trackpoints[7], Scalar( 0, 255, 0), 4 );
         }
 
+        flag_obj_track ? track_frames_count = ((track_frames_count + 1) & framecountmax) : i = (i + 1) % num, track_frames_count = 0,trackpoints.clear();
+        track_frames_count == 0 ? flag_obj_track = 0 : flag_obj_track = 1;
+
+        sprintf(dbgmsg,"track_flag: %01d frames: %02d",flag_obj_track,track_frames_count);
+        putText(display,dbgmsg,Point2f(12,12),FONT_HERSHEY_PLAIN,1.0,Scalar(0, 255, 0));
+
         imshow("CV",display);
+
         if(waitKey(25) >= 0) break;
+
         gmatches.clear();
         fkp.clear();
         matches.clear();
@@ -134,7 +149,6 @@ int main(int argc, char** argv)
         scene.clear();
         obj_corners.clear();
         scene_corners.clear();
-        i = (i + 1) % num;
     }
 
     gmatches.clear();
