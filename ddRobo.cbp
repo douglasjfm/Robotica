@@ -38,6 +38,7 @@
 		</Linker>
 		<Unit filename="ddRobot.cpp" />
 		<Unit filename="kinem.cpp" />
+		<Unit filename="markov.cpp" />
 		<Unit filename="remoteApi/extApi.c">
 			<Option compilerVar="CC" />
 		</Unit>

@@ -116,3 +116,62 @@
 	<gsl/gsl_permutation.h>
 	<gsl/gsl_linalg.h>
 
+1465394635 source:/home/douglas/Documentos/Robotica/ddRobot.cpp
+	<stdio.h>
+	<stdlib.h>
+	<math.h>
+	<string.h>
+	<unistd.h>
+	"remoteApi/extApi.h"
+	"include/v_repConst.h"
+	"remoteApi/extApiPlatform.h"
+
+1465393975 /home/douglas/Documentos/Robotica/remoteApi/extApi.h
+	"extApiPlatform.h"
+	"../include/v_repConst.h"
+
+1465392156 /home/douglas/Documentos/Robotica/remoteApi/extApiPlatform.h
+	<stdint.h>
+
+1465392156 /home/douglas/Documentos/Robotica/include/v_repConst.h
+
+1465392156 source:/home/douglas/Documentos/Robotica/kinem.cpp
+	<math.h>
+	<gsl/gsl_matrix.h>
+	<gsl/gsl_vector.h>
+	<gsl/gsl_blas.h>
+	<gsl/gsl_permutation.h>
+	<gsl/gsl_linalg.h>
+
+1465392156 source:/home/douglas/Documentos/Robotica/remoteApi/extApi.c
+	"extApi.h"
+	"extApiInternal.h"
+	<stdio.h>
+	"extApiJava.h"
+
+1465392156 /home/douglas/Documentos/Robotica/remoteApi/extApiInternal.h
+	"extApiPlatform.h"
+
+1465392156 source:/home/douglas/Documentos/Robotica/remoteApi/extApiPlatform.c
+	"extApiPlatform.h"
+	<stdio.h>
+	<Windows.h>
+	<process.h>
+	<pthread.h>
+	<stdlib.h>
+	<unistd.h>
+	<string.h>
+	<netinet/in.h>
+	<sys/time.h>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<netdb.h>
+
+1465689113 source:/home/douglas/Documentos/Robotica/markov.cpp
+	<math.h>
+	<gsl/gsl_matrix.h>
+	<gsl/gsl_vector.h>
+	<gsl/gsl_blas.h>
+	<gsl/gsl_permutation.h>
+	<gsl/gsl_linalg.h>
+
