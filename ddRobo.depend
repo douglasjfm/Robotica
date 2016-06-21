@@ -116,7 +116,7 @@
 	<gsl/gsl_permutation.h>
 	<gsl/gsl_linalg.h>
 
-1465394635 source:/home/douglas/Documentos/Robotica/ddRobot.cpp
+1466446229 source:/home/douglas/Documentos/Robotica/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -167,11 +167,67 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1465689113 source:/home/douglas/Documentos/Robotica/markov.cpp
+1466446098 source:/home/douglas/Documentos/Robotica/markov.cpp
 	<math.h>
 	<gsl/gsl_matrix.h>
 	<gsl/gsl_vector.h>
 	<gsl/gsl_blas.h>
 	<gsl/gsl_permutation.h>
 	<gsl/gsl_linalg.h>
+	<opencv2/core/core.hpp>
+	<opencv2/highgui/highgui.hpp>
+
+1397211326 /usr/local/include/opencv2/core/core.hpp
+	"opencv2/core/types_c.h"
+	"opencv2/core/version.hpp"
+	<limits.h>
+	<algorithm>
+	<cmath>
+	<cstddef>
+	<complex>
+	<map>
+	<new>
+	<string>
+	<vector>
+	<sstream>
+	"opencv2/core/operations.hpp"
+	"opencv2/core/mat.hpp"
+
+1397211326 /usr/local/include/opencv2/core/types_c.h
+	<assert.h>
+	<stdlib.h>
+	<string.h>
+	<float.h>
+	<stdint.h>
+	<intrin.h>
+	<emmintrin.h>
+	<fastmath.h>
+	<math.h>
+	<ipl.h>
+	<ipl/ipl.h>
+	"tegra_round.hpp"
+	"emmintrin.h"
+
+1397211326 /usr/local/include/opencv2/core/version.hpp
+
+1397211326 /usr/local/include/opencv2/core/operations.hpp
+	<string.h>
+	<limits.h>
+	<ext/atomicity.h>
+	<bits/atomicity.h>
+	<limits>
+
+1397211326 /usr/local/include/opencv2/core/mat.hpp
+	<limits.h>
+	<string.h>
+
+1397211326 /usr/local/include/opencv2/highgui/highgui.hpp
+	"opencv2/core/core.hpp"
+	"opencv2/highgui/highgui_c.h"
+
+1397211326 /usr/local/include/opencv2/highgui/highgui_c.h
+	"opencv2/core/core_c.h"
+
+1397211326 /usr/local/include/opencv2/core/core_c.h
+	"opencv2/core/types_c.h"
 

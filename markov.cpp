@@ -4,6 +4,22 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_permutation.h>
 #include <gsl/gsl_linalg.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+#define pi M_PI
+
+using namespace cv;
+
+typedef struct WallModel
+{
+    Point2f dir;
+    Point2f p0;
+} WallModel;
+
+///Sensores
+int nsen = 3;
+float asen[] = {-pi/2,0.0,pi/2};
 
 float W = 3.0; /// Largura 3 metros - x;
 float L = 4.0; /// Comprimento 4 metros - y;
@@ -18,6 +34,46 @@ int delta_j = L/(2*sp);
 gsl_matrix **mapa;
 
 int goal[8];
+
+int testeParede(Mat m, int x, int y)
+{
+    uchar cor = m.at<uchar>(y, x);
+    uchar a,b,c,d,w = 255;
+    if (cor == w)
+    {
+        a = m.at<uchar>(y-1, x);
+        b = m.at<uchar>(y, x-1);
+        c = m.at<uchar>(y+1, x);
+        d = m.at<uchar>(y, x+1);
+        if (!(a && b && c && d))
+            return 1;
+    }
+    return 0;
+}
+
+float sensorDists(float x, float y)
+{
+
+}
+
+void loadgrid()
+{
+    gsl_matrix **medidas;
+    //std::vector<Point2i> celulasColisao;
+    int i,j,x,y,z,a,b;
+    Mat gridimg = imread("grid.bmp",CV_LOAD_IMAGE_GRAYSCALE);
+    medidas = (gsl_matrix**) calloc(360,sizeof(gsl_matrix*));
+    for(i=0;i<360;i++)
+        medidas[i] = gsl_matrix_alloc(gridimg.cols,gridimg.rows);
+
+    ///Realiza as medições do mapa dadas todas as poses
+    for (x=0;x<gridimg.cols;x++)
+        for (y=0;y<gridimg.rows;y++)
+            for (z=0;z<360;z++)
+            {
+
+            }
+}
 
 /*! Dada a posição (x,y) em metros, nas coordenadas do mapa, retem-se a celula (i,j) do grid*/
 void posicaoCelula(float x, float y, int *i, int *j)

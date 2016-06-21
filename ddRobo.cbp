@@ -34,7 +34,7 @@
 			<Add directory="/usr/include/gsl" />
 		</Compiler>
 		<Linker>
-			<Add option="-pthread -lgsl -lgslcblas" />
+			<Add option="`pkg-config --cflags --libs opencv` -pthread -lgsl -lgslcblas" />
 		</Linker>
 		<Unit filename="ddRobot.cpp" />
 		<Unit filename="kinem.cpp" />
