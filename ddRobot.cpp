@@ -16,6 +16,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 #define V_REP_IP_ADDRESS "127.0.0.1"
 #define V_REP_PORT 19997//1999;
@@ -35,7 +36,12 @@ simxInt caminhoHandle;
 simxInt pathPlanTaskHandle;
 simxInt fimHandle;
 
-void loadgrid();
+float pose0[] = {1.25,0.25,90.0};
+simxFloat vdd = 0.04;
+
+void markov_load();
+void markov_free();
+float ideal_dist(int s, float x ,float y, int tht);
 
 void getPosition(int clientID, simxFloat pos[])   //[x,y,theta]
 {
@@ -147,95 +153,63 @@ float calcphi (float xyt[3], float pxy[3])
 
 int main(int argc, char* argv[])
 {
+    simxFloat dis,d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
+    char *ipAddr = (char*) V_REP_IP_ADDRESS;
+    int portNb = V_REP_PORT,c=0;
+    float tt;
+    float cam_pos[] = {-1.0,1.5,0.0}, pose[3];
+    clock_t t0;
+    simxFloat lwcur,rwcur;
 
-//    char *ipAddr = (char*) V_REP_IP_ADDRESS;
-//    int portNb = V_REP_PORT,c=0;
-//    float goal[3];
-//    float ddpos[3],cam_pos[3];
-//
-//    simxUChar *outbuf,*p;
-//    simxInt outbuflen;
-//
-//    if (argc > 1)
-//    {
-//        ipAddr = argv[1];
-//    }
-//
-//    printf("Iniciando conexao com: %s...\n", ipAddr);
-//
-//    clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
-//    if (clientID != -1)
-//    {
-//        printf("Conexao efetuada\n");
-//
-//        //Get handles for robot parts, actuators and sensores:
-//        simxGetObjectHandle(clientID, "RobotFrame#", &ddRobotHandle, simx_opmode_oneshot_wait);
-//        simxGetObjectHandle(clientID, "LeftMotor#", &leftMotorHandle, simx_opmode_oneshot_wait);
-//        simxGetObjectHandle(clientID, "RightMotor#", &rightMotorHandle, simx_opmode_oneshot_wait);
-//        simxGetObjectHandle(clientID, "GraphOdometry#", &graphOdometryHandle, simx_opmode_oneshot_wait);
-//
-//        printf("RobotFrame: %d\n", ddRobotHandle);
-//        printf("LeftMotor: %d\n", leftMotorHandle);
-//        printf("RightMotor: %d\n", rightMotorHandle);
-//        printf("GraphOdometry: %d\n", graphOdometryHandle);
-//
-//        //start simulation
-//
-//        int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
-//
-//        if (ret==-1)
-//        {
-//            printf("Não foi possível iniciar a simulação.\n");
-//            return -1;
-//        }
-//
-//        printf("Simulação iniciada.\n");
-//
-//        //While is connected:
-//
-//        //printf("%s",p);
-//        while (simxGetConnectionId(clientID) != -1)
-//        {
-//            simxFloat dis,d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
-//            readOdometers(clientID,v_l,v_r);
-//            if (v_l > 0.000001 || v_r > 0.000001)
-//                printf("%.10f %.10f\n",v_l,v_r);
-////            float sinal;
-////            getPosition(clientID,ddpos);
-////            dis = sqrt((ddpos[0]-cam_pos[0])*(ddpos[0]-cam_pos[0]) + (ddpos[1]-cam_pos[1])*(ddpos[1]-cam_pos[1]));
-////            if (dis < 0.05)
-////            {
-////                p = droppoint(p,cam_pos,&(cam_pos[1]),&(cam_pos[2]));
-////                if (!p)
-////                    break;
-////                c++;
-////            }
-////
-////            phi = calcphi(ddpos,cam_pos);
-////            v_des = 0.2;
-////            om_des=0.8*phi;
-////            d=0.20;
-////            v_r=(v_des+d*om_des);
-////            v_l=(v_des-d*om_des);
-////            r_w=0.0325; ///wheel radius;
-////            omega_right = v_r/r_w;
-////            omega_left = v_l/r_w;
-////            printf("%d: %.2f %.2f %.2f %.2f %.3f %.3f\n",c,cam_pos[0],cam_pos[1],ddpos[0],ddpos[1],ddpos[2],phi);
-////            setTargetSpeed(clientID,-omega_left,-omega_right);
-//        }
-//        printf("fim da simulação\n");
-//        //Stop the robot and disconnect from V-Rep;
-//        setTargetSpeed(clientID, 0, 0);
-//        simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
-//        //simxStopSimulation(clientID,simx_opmode_oneshot_wait);
-//        simxFinish(clientID);
-//    }
-//    else
-//    {
-//        printf("Nao foi possivel conectar.\n");
-//        return -2;
-//    }
-//
-    loadgrid();
+    clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
+
+    //Get handles for robot parts, actuators and sensores:
+    simxGetObjectHandle(clientID, "RobotFrame#", &ddRobotHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "LeftMotor#", &leftMotorHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "RightMotor#", &rightMotorHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "GraphOdometry#", &graphOdometryHandle, simx_opmode_oneshot_wait);
+    printf("Iniciando conexao com: %s...\n", ipAddr);
+
+    printf("Conexao efetuada\n");
+
+    int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
+    t0 = clock();
+    c=0;
+    pose[0] = pose0[0];
+    pose[1] = pose0[1];
+    pose[2] = pose0[2];
+    for(;;)
+    {
+        tt = CLOCKS_PER_SEC;
+        tt = (clock() - t0)/tt;
+        tt = tt * 1000;
+        //printf("%f\n",tt);
+        if(tt > 1000.0)
+        {
+            t0 = clock();
+            simxGetJointPosition(clientID, leftMotorHandle, &lwcur, simx_opmode_oneshot);
+            simxGetJointPosition(clientID, rightMotorHandle, &rwcur, simx_opmode_oneshot);
+            printf("%f %f\n%d %d\n",lwcur,rwcur,leftMotorHandle,rightMotorHandle);
+            c++;
+        }
+//    setTargetSpeed(clientID,0.1,0.1);
+        if(c == 10)
+            break;
+
+        phi = atan2(cam_pos[1] - pose[1],cam_pos[0] - pose[0]);//calcphi(pose0,cam_pos);
+        v_des = vdd;
+        om_des=0.8*phi;
+        d=0.20;
+        v_r=(v_des+d*om_des);
+        v_l=(v_des-d*om_des);
+        r_w=0.02; ///wheel radius;
+        omega_right = v_r/r_w;
+        omega_left = v_l/r_w;
+        setTargetSpeed(clientID, omega_left, omega_right);
+    }
+    setTargetSpeed(clientID, 0, 0);
+    //simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
+    simxStopSimulation(clientID,simx_opmode_oneshot_wait);
+    simxFinish(clientID);
     return 0;
 }
