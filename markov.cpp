@@ -13,6 +13,10 @@ float wmap = 4.0;
 float hmap = 4.0;
 float res = 0.05;
 
+extern float vdd, rodaRaio, rodasDiff;
+
+float pose0[] = {1.25,0.25,90.0}, estado[] = {0.0, 0.0, 0.0};
+
 typedef struct pose_d
 {
     gsl_matrix *s0;
@@ -48,6 +52,7 @@ float menord(std::vector<float> v)
     return x;
 }
 
+///Realiza o incremento anti horario de 0 a 180 e de -179 a 0 graus.
 int anthor(int i)
 {
     int r;
@@ -119,6 +124,18 @@ float colisao(float x, float y,int grau,Mapa *modelo)
         return -1.0;///Um Erro ocorreu;
 }
 
+void indexFor(float x, float y, int* i, int* j)
+{
+    (*i) = (hmap/2 - y)/res;
+    (*j) = (x + wmap/2)/res;
+}
+
+void positionFor(int i, int j, float* x, float* y)
+{
+    (*x) = j*res - wmap/2;
+    (*y) = hmap/2 - i*res;
+}
+
 void markov_load()
 {
     FILE *f = fopen("grid.txt","r");
@@ -131,9 +148,11 @@ void markov_load()
         dist[i].s0 = gsl_matrix_alloc(celly,cellx);
         dist[i].s1 = gsl_matrix_alloc(celly,cellx);
         dist[i].s2 = gsl_matrix_alloc(celly,cellx);
+        bel[i].s0 = gsl_matrix_alloc(celly,cellx);
         gsl_matrix_set_zero(dist[i].s0);
         gsl_matrix_set_zero(dist[i].s1);
         gsl_matrix_set_zero(dist[i].s2);
+        gsl_matrix_set_zero(bel[i].s0);
     }
     fscanf(f,"%d",&npar);
     mapmodel.wall = (parede*) calloc(npar,sizeof(parede));
@@ -154,7 +173,8 @@ void markov_load()
         for(j=0;j<cellx;j++)
             for(k=0;k<celly;k++)
             {
-                float xc = j*res - wmap/2,yc = hmap/2 - k*res;
+                float xc, yc;
+                positionFor(k,j,&xc,&yc);
                 g0 = i;
                 g1 = i+90;
                 g2 = i+270;
@@ -166,6 +186,8 @@ void markov_load()
         g1 = anthor(g1);
         g2 = anthor(g2);
     }
+    indexFor(pose0[0],pose0[1],&i,&j);
+    gsl_matrix_set(bel[(int)pose0[2]].s0,i,j,1.0);
 }
 
 void markov_free()
@@ -176,6 +198,7 @@ void markov_free()
         gsl_matrix_free(dist[i].s0);
         gsl_matrix_free(dist[i].s1);
         gsl_matrix_free(dist[i].s2);
+        gsl_matrix_free(bel[i].s0);
     }
     free(mapmodel.wall);
 }
@@ -184,8 +207,7 @@ float ideal_dist(int s, float x ,float y, int tht)
 {
     int i,j,g;
     float ret;
-    i = (hmap/2 - y)/res;
-    j = (x + wmap/2)/res;
+    indexFor(x,y,&i,&j);
     g = tht;
     switch(s)
     {
@@ -194,4 +216,42 @@ float ideal_dist(int s, float x ,float y, int tht)
         case 2: ret = gsl_matrix_get(dist[g].s2,i,j);break;
     }
     return ret;
+}
+
+void markov_position(float* x, float* y, int* g)
+{
+    int i,mi,mj,mg;
+    size_t j,k;
+    float maxp = 0.0, b;
+    for(i=0;i<360;i++)
+    {
+        gsl_matrix_max_index(bel[i].s0,&j,&k);
+        b = gsl_matrix_get(bel[i].s0,j,k);
+        if (maxp < b)
+        {
+            maxp = b;
+            mi = j;
+            mj = k;
+            mg = i;
+        }
+    }
+    positionFor(mi,mj,x,y);
+    (*g) = mg;
+}
+
+/*!
+   dl = deslocamento odometrico da roda esquerda.
+   dr =      "           "      "   "   direita.
+*/
+void markov_move(float dl, float dr)
+{
+    float ds = (dl+dr)/2.0;
+    float dteta = (dr-dl)/rodasDiff;
+    float dx = ds*cos(dteta);
+    float dy = ds*sin(dteta);
+    int a,b,g = (int) (dteta*180.0/pi);
+
+    g = (g < 0) ? (360 - g) : g;
+    indexFor(dx,dy,&a,&b); ///a, b e g indexam o estado de centro da crença dado que foi realizado o ultimo movimento
+
 }

@@ -116,7 +116,7 @@
 	<gsl/gsl_permutation.h>
 	<gsl/gsl_linalg.h>
 
-1466804585 source:/home/douglas/Documentos/Robotica/ddRobot.cpp
+1467097439 source:/home/douglas/Documentos/Robotica/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -168,7 +168,7 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1466736676 source:/home/douglas/Documentos/Robotica/markov.cpp
+1467097456 source:/home/douglas/Documentos/Robotica/markov.cpp
 	<vector>
 	<math.h>
 	<gsl/gsl_matrix.h>

@@ -36,11 +36,14 @@ simxInt caminhoHandle;
 simxInt pathPlanTaskHandle;
 simxInt fimHandle;
 
-float pose0[] = {1.25,0.25,90.0};
-simxFloat vdd = 0.04;
+float vdd = 0.04, rodaRaio = 0.02, rodasDiff = 0.02;
+
+float cam_pos[] = {-1.0,1.5,0.0}, pose[3];
 
 void markov_load();
 void markov_free();
+void markov_move(float dl, float dr);
+
 float ideal_dist(int s, float x ,float y, int tht);
 
 void getPosition(int clientID, simxFloat pos[])   //[x,y,theta]
@@ -100,8 +103,8 @@ float smallestAngleDiff(float target, float source)
 void readOdometers(int clientID, simxFloat &dPhiL, simxFloat &dPhiR)
 {
     //old joint angle position
-    static simxFloat lwprev=0;
-    static simxFloat rwprev=0;
+    static simxFloat lwprev=0.0;
+    static simxFloat rwprev=0.0;
 
     //current joint angle position
     simxFloat lwcur=0;
@@ -157,7 +160,6 @@ int main(int argc, char* argv[])
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT,c=0;
     float tt;
-    float cam_pos[] = {-1.0,1.5,0.0}, pose[3];
     clock_t t0;
     simxFloat lwcur,rwcur;
 
@@ -175,9 +177,6 @@ int main(int argc, char* argv[])
     int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
     t0 = clock();
     c=0;
-    pose[0] = pose0[0];
-    pose[1] = pose0[1];
-    pose[2] = pose0[2];
     for(;;)
     {
         tt = CLOCKS_PER_SEC;
@@ -196,20 +195,46 @@ int main(int argc, char* argv[])
         if(c == 10)
             break;
 
-        phi = atan2(cam_pos[1] - pose[1],cam_pos[0] - pose[0]);//calcphi(pose0,cam_pos);
+        phi = atan2(1,1);//calcphi(pose0,cam_pos);
         v_des = vdd;
         om_des=0.8*phi;
-        d=0.20;
+        d=rodasDiff;
         v_r=(v_des+d*om_des);
         v_l=(v_des-d*om_des);
-        r_w=0.02; ///wheel radius;
+        r_w=rodaRaio; ///wheel radius;
         omega_right = v_r/r_w;
         omega_left = v_l/r_w;
         setTargetSpeed(clientID, omega_left, omega_right);
     }
+    ddRobotHandle = 0;
     setTargetSpeed(clientID, 0, 0);
     //simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
     simxStopSimulation(clientID,simx_opmode_oneshot_wait);
     simxFinish(clientID);
     return 0;
+}
+
+
+void* odom(int* clientID)
+{
+    time_t t0;
+    float tt, lcm15 = 0.0, rcm15 = 0.0;
+    int clid = *clientID;
+    simxFloat dFiL, dFiR;
+    t0 = clock();
+    while (ddRobotHandle)
+    {
+        tt = CLOCKS_PER_SEC;
+        tt = (clock() - t0)/tt;
+        tt = tt * 1000;
+        if (tt > 100.0)
+        {
+            t0 = clock();
+            readOdometers(clid, dFiL, dFiR);
+            lcm15 += dFiL * rodaRaio;
+            rcm15 += dFiR * 0.02;
+            if (lcm15 > 0.15 || rcm15 > 0.15)
+                markov_move(lcm15,rcm15);
+        }
+    }
 }
