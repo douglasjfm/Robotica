@@ -17,6 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 
 #define V_REP_IP_ADDRESS "127.0.0.1"
 #define V_REP_PORT 19997//1999;
@@ -26,7 +27,10 @@
 #include "remoteApi/extApiPlatform.h"
 /*	#include "extApiCustom.h" if you wanna use custom remote API functions! */
 
+int readingOdo;
 int clientID;
+pthread_t tid1;
+
 simxInt ddRobotHandle;
 simxInt leftMotorHandle;
 simxInt rightMotorHandle;
@@ -36,9 +40,13 @@ simxInt caminhoHandle;
 simxInt pathPlanTaskHandle;
 simxInt fimHandle;
 
-float vdd = 0.04, rodaRaio = 0.02, rodasDiff = 0.02;
+float vdd = 0.03, rodaRaio = 0.0325, rodasDiff = 0.15;
 
-float cam_pos[] = {-1.0,1.5,0.0}, pose[3];
+extern float estado[];
+
+
+void stopOdom();
+void startOdom();
 
 void markov_load();
 void markov_free();
@@ -130,7 +138,7 @@ inline double to_deg(double radians)
     return radians * (180.0 / M_PI);
 }
 
-simxUChar* droppoint (simxUChar *p, float *x, float *y, float *z)
+char* droppoint (char *p, float *x, float *y)
 {
     int i=0;
     if (p[i] == '\0') return NULL;
@@ -157,9 +165,10 @@ float calcphi (float xyt[3], float pxy[3])
 int main(int argc, char* argv[])
 {
     simxFloat dis,d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
+    char strrota[100], *prota;
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT,c=0;
-    float tt;
+    float tt,x,y,sx,sy,distp;
     clock_t t0;
     simxFloat lwcur,rwcur;
 
@@ -177,27 +186,23 @@ int main(int argc, char* argv[])
     int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
     t0 = clock();
     c=0;
+    strcpy(strrota,"0,0;-5,0");
+    prota = droppoint(strrota,&x,&y);
+    markov_load();
+    startOdom();
     for(;;)
     {
-        tt = CLOCKS_PER_SEC;
-        tt = (clock() - t0)/tt;
-        tt = tt * 1000;
-        //printf("%f\n",tt);
-        if(tt > 1000.0)
+        distp = sqrt((x-sx)*(x-sx) + (y-sy)*(y-sy));
+        if (distp < 0.05)
         {
-            t0 = clock();
-            simxGetJointPosition(clientID, leftMotorHandle, &lwcur, simx_opmode_oneshot);
-            simxGetJointPosition(clientID, rightMotorHandle, &rwcur, simx_opmode_oneshot);
-            printf("%f %f\n%d %d\n",lwcur,rwcur,leftMotorHandle,rightMotorHandle);
-            c++;
+            prota = droppoint(prota,&x,&y);
+            if(!prota) break;
         }
-//    setTargetSpeed(clientID,0.1,0.1);
-        if(c == 10)
-            break;
-
-        phi = atan2(1,1);//calcphi(pose0,cam_pos);
+        sx = estado[0];
+        sy = estado[1];
+        phi = atan2(y-sy,x-sy);//calcphi(pose0,cam_pos);
         v_des = vdd;
-        om_des=0.8*phi;
+        om_des=0.5*phi;
         d=rodasDiff;
         v_r=(v_des+d*om_des);
         v_l=(v_des-d*om_des);
@@ -206,6 +211,8 @@ int main(int argc, char* argv[])
         omega_left = v_l/r_w;
         setTargetSpeed(clientID, omega_left, omega_right);
     }
+    stopOdom();
+    markov_free();
     ddRobotHandle = 0;
     setTargetSpeed(clientID, 0, 0);
     //simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
@@ -214,27 +221,50 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-
-void* odom(int* clientID)
+void* odom(void* arg)
 {
     time_t t0;
     float tt, lcm15 = 0.0, rcm15 = 0.0;
-    int clid = *clientID;
+    int clid = clientID;
     simxFloat dFiL, dFiR;
     t0 = clock();
-    while (ddRobotHandle)
+    while (readingOdo)
     {
-        tt = CLOCKS_PER_SEC;
-        tt = (clock() - t0)/tt;
-        tt = tt * 1000;
-        if (tt > 100.0)
-        {
-            t0 = clock();
+        //tt = CLOCKS_PER_SEC;
+        //tt = (clock() - t0)/tt;
+        //tt = tt * 1000;
+        //if (tt > 100.0)
+        //{
+            //t0 = clock();
             readOdometers(clid, dFiL, dFiR);
             lcm15 += dFiL * rodaRaio;
-            rcm15 += dFiR * 0.02;
+            rcm15 += dFiR * rodaRaio;
             if (lcm15 > 0.15 || rcm15 > 0.15)
+            {
+                printf("%.3f %.3f ",lcm15,rcm15);
                 markov_move(lcm15,rcm15);
-        }
+                lcm15 = rcm15 = 0.0;
+                fflush(stdout);
+            }
+        //}
     }
+    readingOdo = 1;
+    return NULL;
+}
+
+void startOdom()
+{
+    pthread_t tid1;
+    pthread_attr_t tattr1;
+    pthread_attr_init(&tattr1);
+    pthread_attr_setdetachstate(&tattr1,PTHREAD_CREATE_DETACHED);
+    readingOdo = 1;
+    pthread_create(&tid1,&tattr1,odom,NULL);
+}
+
+void stopOdom()
+{
+    readingOdo = 0;
+    while(!readingOdo){}
+    readingOdo = 0;
 }

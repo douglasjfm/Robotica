@@ -9,13 +9,14 @@
 #define pi M_PI
 
 int nsen = 3;
-float wmap = 4.0;
-float hmap = 4.0;
+float wmap = 2.2;
+float hmap = 2.2;
 float res = 0.05;
 
 extern float vdd, rodaRaio, rodasDiff;
 
-float pose0[] = {1.25,0.25,90.0}, estado[] = {0.0, 0.0, 0.0};
+float pose0[] = {0.8,0.0,180.0};
+float estado[] = {0.0, 0.0, 0.0};
 
 typedef struct pose_d
 {
@@ -188,6 +189,9 @@ void markov_load()
     }
     indexFor(pose0[0],pose0[1],&i,&j);
     gsl_matrix_set(bel[(int)pose0[2]].s0,i,j,1.0);
+    estado[0] = pose0[0];
+    estado[1] = pose0[1];
+    estado[2] = pose0[2];
 }
 
 void markov_free()
@@ -250,8 +254,12 @@ void markov_move(float dl, float dr)
     float dx = ds*cos(dteta);
     float dy = ds*sin(dteta);
     int a,b,g = (int) (dteta*180.0/pi);
+    estado[0] += dx;
+    estado[1] += dy;
 
     g = (g < 0) ? (360 - g) : g;
-    indexFor(dx,dy,&a,&b); ///a, b e g indexam o estado de centro da crença dado que foi realizado o ultimo movimento
+    estado[2] += g;
 
+    indexFor(dx,dy,&a,&b); ///a, b e g indexam o estado de centro da crença dado que foi realizado o ultimo movimento
+    printf("%.3f %.3f\n",estado[0],estado[1]);
 }

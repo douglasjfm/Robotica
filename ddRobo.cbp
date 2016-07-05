@@ -31,10 +31,13 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
-			<Add directory="/usr/include/gsl" />
+			<Add directory="../../Documents/gsl_inst/include" />
 		</Compiler>
 		<Linker>
-			<Add option="`pkg-config --cflags --libs opencv` -pthread -lgsl -lgslcblas" />
+			<Add option="-pthread" />
+			<Add library="../../Documents/gsl_inst/lib/libgsl.a" />
+			<Add library="../../Documents/gsl_inst/lib/libgslcblas.a" />
+			<Add directory="../../Documents/gsl_inst/lib" />
 		</Linker>
 		<Unit filename="ddRobot.cpp" />
 		<Unit filename="kinem.cpp" />
