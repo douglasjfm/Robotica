@@ -59,7 +59,7 @@ float trans_get_phi (float x, float y, float t, float x1, float y1)
     gsl_matrix_free(n);
     gsl_permutation_free(p);
 
-    printf("p: %f %f",a,b);
+    //printf("p: %f %f",a,b);
 
     return atan2(b,a);
 }

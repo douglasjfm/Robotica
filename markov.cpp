@@ -15,7 +15,7 @@ float res = 0.05;
 
 extern float vdd, rodaRaio, rodasDiff;
 
-float pose0[] = {0.8,0.0,180.0};
+float pose0[] = {0.8,0.0,pi};
 float estado[] = {0.0, 0.0, 0.0};
 
 typedef struct pose_d
@@ -251,15 +251,16 @@ void markov_move(float dl, float dr)
 {
     float ds = (dl+dr)/2.0;
     float dteta = (dr-dl)/rodasDiff;
-    float dx = ds*cos(dteta);
-    float dy = ds*sin(dteta);
+    float dx = ds*cos(dteta+estado[2]);
+    float dy = ds*sin(dteta+estado[2]);
     int a,b,g = (int) (dteta*180.0/pi);
+    int sigx, sigy;
     estado[0] += dx;
     estado[1] += dy;
-
+    estado[2] += dteta;
     g = (g < 0) ? (360 - g) : g;
     estado[2] += g;
 
     indexFor(dx,dy,&a,&b); ///a, b e g indexam o estado de centro da crença dado que foi realizado o ultimo movimento
-    printf("%.3f %.3f\n",estado[0],estado[1]);
+    printf("x = %.3f y = %.3f dx = %.3f dy = %.3f\n",estado[0],estado[1],dx,dy);
 }

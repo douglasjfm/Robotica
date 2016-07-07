@@ -9,6 +9,9 @@
  *
  * Testado em: Ubuntu 14.04 + Netbeans
  *
+ * Adaptado Pela Equipe 6 2016.1
+ * @autor djfm
+ *
  */
 
 #include <stdio.h>
@@ -40,9 +43,11 @@ simxInt caminhoHandle;
 simxInt pathPlanTaskHandle;
 simxInt fimHandle;
 
-float vdd = 0.03, rodaRaio = 0.0325, rodasDiff = 0.15;
+float vdd = 0.002, rodaRaio = 0.0325, rodasDiff = 0.15;
 
 extern float estado[];
+
+int rotaflag;
 
 
 void stopOdom();
@@ -168,7 +173,7 @@ int main(int argc, char* argv[])
     char strrota[100], *prota;
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
     int portNb = V_REP_PORT,c=0;
-    float tt,x,y,sx,sy,distp;
+    float tt,x,y,sx,sy,distp,cam_pos[3];
     clock_t t0;
     simxFloat lwcur,rwcur;
 
@@ -186,35 +191,42 @@ int main(int argc, char* argv[])
     int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
     t0 = clock();
     c=0;
-    strcpy(strrota,"0,0;-5,0");
+    strcpy(strrota,"-0,4;0,4");
     prota = droppoint(strrota,&x,&y);
-    markov_load();
+    printf("goal: %.2f %.2f\n",x,y);
+    //markov_load();
     startOdom();
-    for(;;)
+    rotaflag = 1;
+    for(;rotaflag;)
     {
         distp = sqrt((x-sx)*(x-sx) + (y-sy)*(y-sy));
-        if (distp < 0.05)
+        if (distp < 0.1)
         {
             prota = droppoint(prota,&x,&y);
-            if(!prota) break;
+            if(!prota)
+            {
+                setTargetSpeed(clientID, 0, 0);
+                break;
+            }
         }
+        //getPosition(clientID,estado);
         sx = estado[0];
         sy = estado[1];
-        phi = atan2(y-sy,x-sy);//calcphi(pose0,cam_pos);
-        v_des = vdd;
-        om_des=0.5*phi;
+        cam_pos[0] = x;
+        cam_pos[1] = y;
+        phi = -calcphi(estado,cam_pos);//atan2(y-sy,x-sx);
+        v_des = 0.02;
+        om_des=0.2*phi;
         d=rodasDiff;
-        v_r=(v_des+d*om_des);
-        v_l=(v_des-d*om_des);
+        v_r=(v_des-d*om_des);
+        v_l=(v_des+d*om_des);
         r_w=rodaRaio; ///wheel radius;
         omega_right = v_r/r_w;
         omega_left = v_l/r_w;
         setTargetSpeed(clientID, omega_left, omega_right);
     }
     stopOdom();
-    markov_free();
-    ddRobotHandle = 0;
-    setTargetSpeed(clientID, 0, 0);
+    //markov_free();
     //simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
     simxStopSimulation(clientID,simx_opmode_oneshot_wait);
     simxFinish(clientID);
@@ -239,12 +251,14 @@ void* odom(void* arg)
             readOdometers(clid, dFiL, dFiR);
             lcm15 += dFiL * rodaRaio;
             rcm15 += dFiR * rodaRaio;
-            if (lcm15 > 0.15 || rcm15 > 0.15)
+            if (lcm15 > 0.05 || rcm15 > 0.05)
             {
-                printf("%.3f %.3f ",lcm15,rcm15);
+                //printf("%.3f %.3f\n",lcm15,rcm15);
                 markov_move(lcm15,rcm15);
                 lcm15 = rcm15 = 0.0;
-                fflush(stdout);
+                //fflush(stdout);
+                if (lcm15 > 1.0 || rcm15 > 1.0)
+                    rotaflag = 0;
             }
         //}
     }
