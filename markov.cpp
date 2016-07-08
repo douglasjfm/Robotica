@@ -1,17 +1,20 @@
 #include <vector>
 #include <math.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_linalg.h>
+#include <stdio.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #define pi M_PI
+
+using namespace cv;
 
 int nsen = 3;
 float wmap = 2.2;
 float hmap = 2.2;
 float res = 0.05;
+
+float Kr = 1.0;
+float Kl = 1.0;
 
 extern float vdd, rodaRaio, rodasDiff;
 
@@ -20,9 +23,9 @@ float estado[] = {0.0, 0.0, 0.0};
 
 typedef struct pose_d
 {
-    gsl_matrix *s0;
-    gsl_matrix *s1;
-    gsl_matrix *s2;
+    cv::Mat s0;
+    cv::Mat s1;
+    cv::Mat s2;
 }pose_d;
 
 typedef struct parede
@@ -146,14 +149,10 @@ void markov_load()
 
     for (i=0;i<360;i++)
     {
-        dist[i].s0 = gsl_matrix_alloc(celly,cellx);
-        dist[i].s1 = gsl_matrix_alloc(celly,cellx);
-        dist[i].s2 = gsl_matrix_alloc(celly,cellx);
-        bel[i].s0 = gsl_matrix_alloc(celly,cellx);
-        gsl_matrix_set_zero(dist[i].s0);
-        gsl_matrix_set_zero(dist[i].s1);
-        gsl_matrix_set_zero(dist[i].s2);
-        gsl_matrix_set_zero(bel[i].s0);
+        dist[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
+        dist[i].s1 = Mat(celly,cellx,CV_32FC1,0.0);
+        dist[i].s2 = Mat(celly,cellx,CV_32FC1,0.0);
+        bel[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
     }
     fscanf(f,"%d",&npar);
     mapmodel.wall = (parede*) calloc(npar,sizeof(parede));
@@ -179,16 +178,16 @@ void markov_load()
                 g0 = i;
                 g1 = i+90;
                 g2 = i+270;
-                gsl_matrix_set(dist[i].s0,k,j,colisao(xc,yc,g0,&mapmodel));
-                gsl_matrix_set(dist[i].s1,k,j,colisao(xc,yc,g1,&mapmodel));
-                gsl_matrix_set(dist[i].s2,k,j,colisao(xc,yc,g2,&mapmodel));
+                dist[i].s0.at<float>(k,j) = colisao(xc,yc,g0,&mapmodel);
+                dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);
+                dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);
             }
         g0 = anthor(g0);
         g1 = anthor(g1);
         g2 = anthor(g2);
     }
     indexFor(pose0[0],pose0[1],&i,&j);
-    gsl_matrix_set(bel[(int)pose0[2]].s0,i,j,1.0);
+    bel[(int)pose0[2]].s0.at<float>(i,j) = 1.0;
     estado[0] = pose0[0];
     estado[1] = pose0[1];
     estado[2] = pose0[2];
@@ -199,10 +198,10 @@ void markov_free()
     int i;
     for (i=0;i<360;i++)
     {
-        gsl_matrix_free(dist[i].s0);
-        gsl_matrix_free(dist[i].s1);
-        gsl_matrix_free(dist[i].s2);
-        gsl_matrix_free(bel[i].s0);
+        dist[i].s0.empty();
+        dist[i].s1.empty();
+        dist[i].s2.empty();
+        bel[i].s0.empty();
     }
     free(mapmodel.wall);
 }
@@ -215,52 +214,76 @@ float ideal_dist(int s, float x ,float y, int tht)
     g = tht;
     switch(s)
     {
-        case 0: ret = gsl_matrix_get(dist[g].s0,i,j);break;
-        case 1: ret = gsl_matrix_get(dist[g].s1,i,j);break;
-        case 2: ret = gsl_matrix_get(dist[g].s2,i,j);break;
+        case 0: ret = dist[g].s0.at<float>(i,j);break;
+        case 1: ret = dist[g].s1.at<float>(i,j);break;
+        case 2: ret = dist[g].s2.at<float>(i,j);break;
     }
     return ret;
 }
 
-void markov_position(float* x, float* y, int* g)
+int actionUpdate(float dl, float dr)
 {
-    int i,mi,mj,mg;
-    size_t j,k;
-    float maxp = 0.0, b;
-    for(i=0;i<360;i++)
+    int x,y,t,NUMBELX = wmap/res, NUMBELY = hmap/res;
+    int a,b,t0;
+    float dteta = (dr - dl)/rodasDiff;
+
+    cv::Mat X1(1,3, CV_32FC1), //current position [x,y,theta]
+            X0(1,3, CV_32FC1), //previous position [x,y,theta]
+            M(1,3, CV_32FC1),  //new expected position [x,y,theta]
+            Ed(2,2, CV_32FC1),  //covar(dsr, dsl)
+            FDrl(3,2, CV_32FC1),//Jacobian
+            Ep(3,3, CV_32FC1);  //motion error Sigmap
+
+    const int belSizes[3]={hmap/res,wmap/res,360};
+    cv::Mat sumbel(3, belSizes, CV_32FC1, 0.0);
+
+    Ed.at<float>(0,0) = Kr*fabs(dsr);
+    Ed.at<float>(1,1) = Kl*fabs(dsl);
+    Ed.at<float>(0,1) = 0;
+    Ed.at<float>(1,0) = 0;
+
+    for (t=0;t<360;t++)
     {
-        gsl_matrix_max_index(bel[i].s0,&j,&k);
-        b = gsl_matrix_get(bel[i].s0,j,k);
-        if (maxp < b)
+        for(x=0;x<NUMBELX;x++)
         {
-            maxp = b;
-            mi = j;
-            mj = k;
-            mg = i;
+            for(y=0;y<NUMBELY;y++)
         }
     }
-    positionFor(mi,mj,x,y);
-    (*g) = mg;
+
 }
 
 /*!
    dl = deslocamento odometrico da roda esquerda.
    dr =      "           "      "   "   direita.
 */
-void markov_move(float dl, float dr)
+int markov_move(float dwl, float dwr)
 {
-    float ds = (dl+dr)/2.0;
-    float dteta = (dr-dl)/rodasDiff;
-    float dx = ds*cos(dteta+estado[2]);
-    float dy = ds*sin(dteta+estado[2]);
-    int a,b,g = (int) (dteta*180.0/pi);
-    int sigx, sigy;
-    estado[0] += dx;
-    estado[1] += dy;
-    estado[2] += dteta;
-    g = (g < 0) ? (360 - g) : g;
-    estado[2] += g;
+    static float prevdl = 0.0, prevdr = 0.0;
+    float ds,dl = dwl*rodaRaio, dr = dwr*rodaRaio;
+    float dteta;
+    float dx,dy;
+    int g,a,b,sigx,sigy;
 
-    indexFor(dx,dy,&a,&b); ///a, b e g indexam o estado de centro da crença dado que foi realizado o ultimo movimento
-    printf("x = %.3f y = %.3f dx = %.3f dy = %.3f\n",estado[0],estado[1],dx,dy);
+    dl = prevdl = prevdl + dl;
+    dr = prevdr = prevdr + dr;
+
+    ds = (dl+dr)/2.0;
+    dteta = (dr-dl)/rodasDiff;
+    //g = (int)(dteta*180.0/pi);
+
+    //estado[0] = ds*cos(dteta+estado[2]);
+    //estado[1] = ds*sin(dteta+estado[2]);
+    //estado[2] += dteta;
+
+    //printf("x = %.3f y = %.3f\n",estado[0],estado[1]);
+    if (ds > 0.05 && dteta > pi/180)
+    {
+        prevdl = prevdr = 0.0;
+        actionUpdate(dl,dr);
+    }
+}
+
+void markov_correct()
+{
+
 }

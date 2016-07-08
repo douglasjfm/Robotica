@@ -55,7 +55,8 @@ void startOdom();
 
 void markov_load();
 void markov_free();
-void markov_move(float dl, float dr);
+int markov_move(float dwl, float dwr);
+void markov_correct();
 
 float ideal_dist(int s, float x ,float y, int tht);
 
@@ -113,23 +114,51 @@ float smallestAngleDiff(float target, float source)
     return a;
 }
 
-void readOdometers(int clientID, simxFloat &dPhiL, simxFloat &dPhiR)
+int readOdometers(int clientID, simxFloat &dwL, simxFloat &dwR)
 {
+    static bool first = true;
     //old joint angle position
-    static simxFloat lwprev=0.0;
-    static simxFloat rwprev=0.0;
+    static simxFloat lwprev=0;
+    static simxFloat rwprev=0;
 
     //current joint angle position
     simxFloat lwcur=0;
     simxFloat rwcur=0;
 
-    simxGetJointPosition(clientID, leftMotorHandle, &lwcur, simx_opmode_oneshot);
-    simxGetJointPosition(clientID, rightMotorHandle, &rwcur, simx_opmode_oneshot);
+    if (first) {
+        simxInt ret = simxGetJointPosition(clientID, leftMotorHandle, &lwprev, simx_opmode_streaming);
+        if (ret>0) return -1;
 
-    dPhiL = smallestAngleDiff(lwcur, lwprev);
-    dPhiR = smallestAngleDiff(rwcur, rwprev);
+        ret = simxGetJointPosition(clientID, rightMotorHandle, &rwprev, simx_opmode_streaming);
+        if (ret>0) return -1;
+
+        dwR = dwL = 0;
+        first = false;
+    }
+
+    simxInt ret = simxGetJointPosition(clientID, leftMotorHandle, &lwcur, simx_opmode_buffer);
+    if (ret>0) return -1;
+
+    ret = simxGetJointPosition(clientID, rightMotorHandle, &rwcur, simx_opmode_buffer);
+    if (ret>0) return -1;
+
+    dwL = smallestAngleDiff(lwcur, lwprev);
+    dwR = smallestAngleDiff(rwcur, rwprev);
+
+//    dwR = rwcur - rwprev;
+//    dwL = lwcur - lwprev;
+
+    if (fabs(dwR)>M_PI || fabs(dwL)>M_PI) {
+        printf("wL: %f - (%f) = %f\n", lwcur, lwprev, dwL);
+        printf("wR: %f - (%f) = %f\n", rwcur, rwprev, dwR);
+        lwprev = lwcur;
+        rwprev = rwcur;
+        return -1;
+    }
+
     lwprev = lwcur;
     rwprev = rwcur;
+    return 0;
 }
 
 void setTargetSpeed(int clientID, simxFloat phiL, simxFloat phiR)
@@ -191,7 +220,7 @@ int main(int argc, char* argv[])
     int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
     t0 = clock();
     c=0;
-    strcpy(strrota,"-0,4;0,4");
+    strcpy(strrota,"-0,4;-0,4");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
     //markov_load();
@@ -236,10 +265,10 @@ int main(int argc, char* argv[])
 void* odom(void* arg)
 {
     time_t t0;
-    float tt, lcm15 = 0.0, rcm15 = 0.0;
-    int clid = clientID;
+    int clid = clientID, cells;
     simxFloat dFiL, dFiR;
     t0 = clock();
+    cells = 1;
     while (readingOdo)
     {
         //tt = CLOCKS_PER_SEC;
@@ -248,18 +277,18 @@ void* odom(void* arg)
         //if (tt > 100.0)
         //{
             //t0 = clock();
+            if (cells > 1)
+                markov_correct();
             readOdometers(clid, dFiL, dFiR);
-            lcm15 += dFiL * rodaRaio;
-            rcm15 += dFiR * rodaRaio;
-            if (lcm15 > 0.05 || rcm15 > 0.05)
-            {
+            //if (lcm15 > 0.05 || rcm15 > 0.05)
+            //{
                 //printf("%.3f %.3f\n",lcm15,rcm15);
-                markov_move(lcm15,rcm15);
-                lcm15 = rcm15 = 0.0;
+                cells = markov_move(dFiL,dFiR);
                 //fflush(stdout);
-                if (lcm15 > 1.0 || rcm15 > 1.0)
-                    rotaflag = 0;
-            }
+                //if (lcm15 > 1.0 || rcm15 > 1.0)
+                //    rotaflag = 0;
+            //}
+            //extApi_sleepMs(5);
         //}
     }
     readingOdo = 1;

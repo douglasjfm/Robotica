@@ -65,25 +65,25 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1467907759 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
+1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
 	"extApi.h"
 	"extApiInternal.h"
 	<stdio.h>
 	"extApiJava.h"
 
-1467907759 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
 	"extApiPlatform.h"
 	"../include/v_repConst.h"
 
-1467907759 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
 	<stdint.h>
 
-1467907759 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
 
-1467907759 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
 	"extApiPlatform.h"
 
-1467907759 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
+1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
 	"extApiPlatform.h"
 	<stdio.h>
 	<Windows.h>
@@ -98,7 +98,7 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1467922672 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+1468005139 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -233,14 +233,12 @@
 1397211326 /usr/local/include/opencv2/core/core_c.h
 	"opencv2/core/types_c.h"
 
-1467913550 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
+1468009227 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
 	<vector>
 	<math.h>
-	<gsl/gsl_matrix.h>
-	<gsl/gsl_vector.h>
-	<gsl/gsl_blas.h>
-	<gsl/gsl_permutation.h>
-	<gsl/gsl_linalg.h>
+	<stdio.h>
+	<opencv2/core/core.hpp>
+	<opencv2/highgui/highgui.hpp>
 
 1467741562 /home/CIN/djfm/Downloads/gsl-2.1/vector
 
@@ -636,7 +634,7 @@
 1446567715 /home/CIN/djfm/Downloads/gsl-2.1/gsl/gsl_minmax.h
 	<gsl/gsl_inline.h>
 
-1467912725 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
+1467989118 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
 	<math.h>
 	<gsl/gsl_matrix.h>
 	<gsl/gsl_vector.h>
@@ -1035,4 +1033,58 @@
 
 1467741776 /home/CIN/djfm/Documents/gsl_inst/include/gsl/gsl_minmax.h
 	<gsl/gsl_inline.h>
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/core.hpp
+	"opencv2/core/types_c.h"
+	"opencv2/core/version.hpp"
+	<limits.h>
+	<algorithm>
+	<cmath>
+	<cstddef>
+	<complex>
+	<map>
+	<new>
+	<string>
+	<vector>
+	<sstream>
+	"opencv2/core/operations.hpp"
+	"opencv2/core/mat.hpp"
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/types_c.h
+	<assert.h>
+	<stdlib.h>
+	<string.h>
+	<float.h>
+	<stdint.h>
+	<intrin.h>
+	<emmintrin.h>
+	<fastmath.h>
+	<math.h>
+	<ipl.h>
+	<ipl/ipl.h>
+	"tegra_round.hpp"
+	"emmintrin.h"
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/version.hpp
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/operations.hpp
+	<string.h>
+	<limits.h>
+	<ext/atomicity.h>
+	<bits/atomicity.h>
+	<limits>
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/mat.hpp
+	<limits.h>
+	<string.h>
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/highgui/highgui.hpp
+	"opencv2/core/core.hpp"
+	"opencv2/highgui/highgui_c.h"
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/highgui/highgui_c.h
+	"opencv2/core/core_c.h"
+
+1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/core_c.h
+	"opencv2/core/types_c.h"
 
