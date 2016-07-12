@@ -354,6 +354,13 @@ void fdeltaRL(float theta, float ds, float dtheta, cv::Mat &FDrl)
     FDrl.at<float>(2,1) = -1/b;//6
 }
 
+int grausTo360(int g)
+{
+    if(g < 0 && g >= -180)
+        return (360-g);
+    return g;
+}
+
 int actionUpdate(float dl, float dr)
 {
     int x,y,t,NUMBELX = wmap/res, NUMBELY = hmap/res;
@@ -450,8 +457,9 @@ int actionUpdate(float dl, float dr)
                         mapmax[1] = swp;
                     }
 
-                    printf("%d\n",dtrect_gr);
+                    //printf("%d %f\n",dtrect_gr,dtrect);
                     graus2 = (int)(x1min[2]*180.0/pi);
+                    dtrect_gr = dtrect_gr << 1;
                     for(t1=0; t1<=dtrect_gr; t1++)  //for each new theta
                     {
                         for(x1 =  mapmin[0]; x1<=mapmax[0]; x1++)   //for each new x
@@ -464,7 +472,7 @@ int actionUpdate(float dl, float dr)
                                 X1.at<float>(0,1) = py1;
                                 X1.at<float>(0,2) = graus2*pi/180.0;
                                 px1_u1x0 = pTrvGaussian(M, X1, Ep);
-                                sumbel.at<float>(y1,x1,t1) += blf*px1_u1x0;
+                                sumbel.at<float>(y1,x1,grausTo360(t1)) += blf*px1_u1x0;
                                 sum += blf*px1_u1x0;
                                 cells++;
 //                                if (px1_u1x0>0) {
@@ -483,7 +491,7 @@ int actionUpdate(float dl, float dr)
     {
         bel/sum;
     }
-    printf("%d cells\n",cells);
+    printf("%d updated cells\n",cells);
     return cells;
 }
 
@@ -565,8 +573,8 @@ void markov_correct(float distF, float distL, float distR)
     float robotPos[3]; //[x,y,theta]
     int x,y,t,graus=0;
     float sensorPoint[3], mapPoint[3];
-    float p, sum=0,b,mp=0.0,estadox,estadoy,estadot;
-printf("%.2f %.2f %.2f\n",distL,distF,distR);
+    float p, sum=0,b,mp=0.0,estadox = estado[0],estadoy=estado[1],estadot=estado[2];
+printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)
@@ -577,7 +585,7 @@ printf("%.2f %.2f %.2f\n",distL,distF,distR);
                 positionFor(y,x,&(robotPos[0]),&(robotPos[1]));
                 b = bel.at<float>(y,x,t);
 
-                if (b>0)
+                if (b>0.0)
                 {
                     float stmin, stmax, d;
                     float dF=999, dL=999, dR=999;
@@ -626,7 +634,7 @@ printf("%.2f %.2f %.2f\n",distL,distF,distR);
                     p = pGaussian(dF, SONAR_SIGMA, res)*pGaussian(dL, SONAR_SIGMA, res)*pGaussian(dR, SONAR_SIGMA, res)*b;
                     bel.at<float>(y,x,t) = p;
                     sum+=p;
-                    printf("%.10f: %.2f %.2f %.2f\n%.2f %.2f %.2f\n",b,distF,distL,distR,dF,dL,dR);
+                    printf("%.10f: %.2f %.2f %.2f\n%.2f %.2f %.2f\n",p,distF,distL,distR,dF,dL,dR);
                     if(p>mp)
                     {
                         estadox = robotPos[0];

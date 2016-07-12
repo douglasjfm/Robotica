@@ -46,7 +46,7 @@ simxInt sensorFrontHandle;
 simxInt sensorLeftHandle;
 simxInt sensorRightHandle;
 
-float vdd = 0.002, rodaRaio = 0.0325, rodasDiff = 0.15;
+float vdd = 0.07, rodaRaio = 0.0325, rodasDiff = 0.15;
 
 extern float estado[];
 
@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
     printf("Conexao efetuada\n");
 
     simxStartSimulation(clientID, simx_opmode_oneshot_wait);
-    strcpy(strrota,"0,0;0,4");
+    strcpy(strrota,"-0,4;0,2|0,0;0,0");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
     markov_load();
@@ -197,7 +197,7 @@ int main(int argc, char* argv[])
         cam_pos[0] = x;
         cam_pos[1] = y;
         phi = calcphi(estado,cam_pos);
-        v_des = 0.01;
+        v_des = vdd;
         om_des=0.5*phi;
         //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
         d=rodasDiff;
@@ -251,7 +251,7 @@ void* odom(void* arg)
         readOdometers(clid, dFiL, dFiR);
         cells = markov_move(dFiL,dFiR);
 
-        extApi_sleepMs(5);
+        extApi_sleepMs(2);
     }
     readingOdo = 1;
     return NULL;
