@@ -159,19 +159,18 @@ void markov_load()
     int i,j,k;
     int g0, g1, g2;
     int sizesBel[3];
-    bel = 0.0;
     cellx = (int)round(wmap/res);
     celly = (int)round(hmap/res);
     sizesBel[0] = celly;
     sizesBel[1] = cellx;
     sizesBel[2] = 360;
     bel = Mat(3,sizesBel,CV_32FC1);
+    bel = 0.0;
     for (i=0; i<360; i++)
     {
         dist[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
         dist[i].s1 = Mat(celly,cellx,CV_32FC1,0.0);
         dist[i].s2 = Mat(celly,cellx,CV_32FC1,0.0);
-        //bel[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
     }
     fscanf(f,"%d",&npar);
     mapmodel.wall = (parede*) calloc(npar,sizeof(parede));
@@ -211,6 +210,7 @@ void markov_load()
     estado[0] = pose0[0];
     estado[1] = pose0[1];
     estado[2] = pose0[2];
+    printf("Markov Loaded: %d %d\n",celly,cellx);
 }
 
 void markov_free()
@@ -357,10 +357,10 @@ void fdeltaRL(float theta, float ds, float dtheta, cv::Mat &FDrl)
 int actionUpdate(float dl, float dr)
 {
     int x,y,t,NUMBELX = wmap/res, NUMBELY = hmap/res;
-    int a,b,t0,graus,graus2,t1,x1,y1;
+    int graus,graus2,t1,x1,y1,cells = 0;
     char newTeta;
     float dtheta = (dr - dl)/rodasDiff,blf,ds = (dr+dl)/2.0;
-    float costdt2,sintdt2,sum = 0,cells = 0;
+    float costdt2,sintdt2,sum = 0;
 
     cv::Mat X1(1,3, CV_32FC1), //current position [x,y,theta]
     X0(1,3, CV_32FC1), //previous position [x,y,theta]
@@ -437,8 +437,20 @@ int actionUpdate(float dl, float dr)
                     positionFor(mapmin[0],mapmin[1],&(x1min[0]),&(x1min[1]));
                     positionFor(mapmax[0],mapmax[1],&(x1max[0]),&(x1max[1]));
 
+                    if(mapmax[0] < mapmin[0])
+                    {
+                        int swp=mapmin[0];
+                        mapmin[0] = mapmax[0];
+                        mapmax[0] = swp;
+                    }
+                    if(mapmax[1] < mapmin[1])
+                    {
+                        int swp=mapmin[1];
+                        mapmin[1] = mapmax[1];
+                        mapmax[1] = swp;
+                    }
 
-//                    printf("X0 = (%.2f,%.2f,%.2f) M = (%.2f,%.2f,%.2f)\n", X0.at<float>(0,0), X0.at<float>(0,1), X0.at<float>(0,2), M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2));
+                    printf("%d\n",dtrect_gr);
                     graus2 = (int)(x1min[2]*180.0/pi);
                     for(t1=0; t1<=dtrect_gr; t1++)  //for each new theta
                     {
@@ -471,20 +483,26 @@ int actionUpdate(float dl, float dr)
     {
         bel/sum;
     }
+    printf("%d cells\n",cells);
     return cells;
 }
 
 /*!
-   dl = deslocamento odometrico da roda esquerda.
-   dr =      "           "      "   "   direita.
+   Markov Action Update
 */
 int markov_move(float dwl, float dwr)
 {
     static float prevdl = 0.0, prevdr = 0.0;
     float ds,dl = dwl*rodaRaio, dr = dwr*rodaRaio;
     float dteta;
-    float dx,dy;
     //int g,a,b,sigx,sigy;
+
+    ds = (dl+dr)/2.0;
+    dteta = (dr-dl)/rodasDiff;
+
+    estado[0] += ds*cos(dteta+estado[2]);
+    estado[1] += ds*sin(dteta+estado[2]);
+    estado[2] += dteta;
 
     dl = prevdl = prevdl + dl;
     dr = prevdr = prevdr + dr;
@@ -497,13 +515,16 @@ int markov_move(float dwl, float dwr)
     //estado[1] = ds*sin(dteta+estado[2]);
     //estado[2] += dteta;
 
-    //printf("x = %.3f y = %.3f\n",estado[0],estado[1]);
+    //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
     //printf("%.3f %.3f\n",ds,dteta);
-    if (ds >= res && dteta >= pi/180.0)
-    {//printf("->%.3f %.3f\n",ds,dteta);
+    if (ds > res && fabs(dteta) > pi/180.0)
+    {
+        //printf("->%.3f %.3f\n",ds,dteta);
         prevdl = prevdr = 0.0;
-        actionUpdate(dl,dr);
+        return actionUpdate(dl,dr);
     }
+
+    return 0;
 }
 
 float nearesPointInMap(float *p, float *npl, int s)
@@ -512,16 +533,40 @@ float nearesPointInMap(float *p, float *npl, int s)
     indexFor(p[0],p[1],&i,&j);
     graus = (int)round(p[2]*180.0/pi);
     graus = graus < 0 ? (180 + (graus + 179)) : graus;
-    ideal_dist(s,p[0],p[1],graus);
+    return ideal_dist(s,p[0],p[1],graus);
 }
 
+void robotToWorld(float* vetin, float* robotPos, float *out)
+{
+    float sintheta = sin(robotPos[2]);
+    float costheta = cos(robotPos[2]);
+
+    out[0] = robotPos[0] + (vetin[0]*costheta - vetin[1]*sintheta);
+    out[1] = robotPos[1] + (vetin[0]*sintheta + vetin[1]*costheta);
+    out[2] = robotPos[2] + vetin[2];
+}
+
+void sensorToRobot(float dist, float* sensorPos, float *out)
+{
+    out[0] = sensorPos[0] + dist*cos(sensorPos[2]);
+    out[1] = sensorPos[1] + dist*sin(sensorPos[2]);
+}
+
+void robotToSensorPoint(float *pRobot, float *pSensor, float dist, float* point)
+{
+    float pSR[2];
+    sensorToRobot(dist, pSensor, pSR);
+    robotToWorld(pSR, pRobot, point);
+}
+
+/*! Markov Update Action*/
 void markov_correct(float distF, float distL, float distR)
 {
     float robotPos[3]; //[x,y,theta]
     int x,y,t,graus=0;
     float sensorPoint[3], mapPoint[3];
     float p, sum=0,b,mp=0.0,estadox,estadoy,estadot;
-
+printf("%.2f %.2f %.2f\n",distL,distF,distR);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)
@@ -547,7 +592,7 @@ void markov_correct(float distF, float distL, float distR)
                     stmax = sensorFrontPos[2]+SONAR_ANGLE;
                     for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
                     {
-                        //robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
+                        robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
                         d = nearesPointInMap(sensorPoint, mapPoint,0);
                         if (d<dF) dF=d;
                     }
@@ -560,7 +605,7 @@ void markov_correct(float distF, float distL, float distR)
                     stmax = sensorLeftPos[2]+SONAR_ANGLE;
                     for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
                     {
-                        //robotToSensorPoint(robotPos, sensorDir, distL, sensorPoint);
+                        robotToSensorPoint(robotPos, sensorDir, distL, sensorPoint);
                         d = nearesPointInMap(sensorPoint, mapPoint,1);
                         if (d<dL) dL=d;
                     }
@@ -573,7 +618,7 @@ void markov_correct(float distF, float distL, float distR)
                     stmax = sensorRightPos[2]+SONAR_ANGLE;
                     for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
                     {
-                        //robotToSensorPoint(robotPos, sensorDir, distR, sensorPoint);
+                        robotToSensorPoint(robotPos, sensorDir, distR, sensorPoint);
                         d = nearesPointInMap(sensorPoint, mapPoint,2);
                         if (d<dR) dR=d;
                     }

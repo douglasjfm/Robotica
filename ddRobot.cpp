@@ -150,13 +150,11 @@ float calcphi (float xyt[3], float pxy[3])
 
 int main(int argc, char* argv[])
 {
-    simxFloat dis,d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
+    simxFloat d,v_r,v_l,r_w,v_des,om_des,omega_right,omega_left,phi;
     char strrota[100], *prota;
     char *ipAddr = (char*) V_REP_IP_ADDRESS;
-    int portNb = V_REP_PORT,c=0;
-    float tt,x,y,sx,sy,distp,cam_pos[3];
-    clock_t t0;
-    simxFloat lwcur,rwcur;
+    int portNb = V_REP_PORT;
+    float x,y,sx,sy,distp,cam_pos[3];
 
     clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
     //if (clientID < 1) return 0;
@@ -173,10 +171,8 @@ int main(int argc, char* argv[])
 
     printf("Conexao efetuada\n");
 
-    int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
-    t0 = clock();
-    c=0;
-    strcpy(strrota,"0,0;0,0");
+    simxStartSimulation(clientID, simx_opmode_oneshot_wait);
+    strcpy(strrota,"0,0;0,4");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
     markov_load();
@@ -200,7 +196,7 @@ int main(int argc, char* argv[])
         }
         cam_pos[0] = x;
         cam_pos[1] = y;
-        phi = calcphi(estado,cam_pos);//atan2(y-sy,x-sx);
+        phi = calcphi(estado,cam_pos);
         v_des = 0.01;
         om_des=0.5*phi;
         //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
@@ -235,10 +231,8 @@ simxFloat readSonar(int clientID, simxInt sensorHandle)
 
 void* odom(void* arg)
 {
-    time_t t0;
     int clid = clientID, cells;
     simxFloat dFiL, dFiR;
-    t0 = clock();
     cells = 1;
     simxFloat detectedPoint[3];
     simxUChar detectionState=1;
@@ -248,14 +242,16 @@ void* odom(void* arg)
     while (readingOdo)
     {
         simxFloat distF=-1, distR=-1, distL=-1;
-        readOdometers(clid, dFiL, dFiR);
-        cells = markov_move(dFiL,dFiR);
         distF = readSonar(clid, sensorFrontHandle);
         distL = readSonar(clid, sensorLeftHandle);
         distR = readSonar(clid, sensorRightHandle);
         if (cells > 0 && distF > 0.0 && distL > 0.0 && distR > 0.0)
             markov_correct(distF,distR,distL);
-        //extApi_sleepMs(2);
+
+        readOdometers(clid, dFiL, dFiR);
+        cells = markov_move(dFiL,dFiR);
+
+        extApi_sleepMs(5);
     }
     readingOdo = 1;
     return NULL;
