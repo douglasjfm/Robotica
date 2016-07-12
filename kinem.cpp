@@ -1,9 +1,9 @@
 #include <math.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_linalg.h>
+#include <stdio.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+using namespace cv;
 
 /*!
  Realiza a Transformação do sistema de coordenadas global do ponto
@@ -19,47 +19,37 @@ com orientação dada por t rad.
 */
 float trans_get_phi (float x, float y, float t, float x1, float y1)
 {
-    gsl_matrix *m,*n;
-    gsl_vector *v,*r;
-    float a,b;
-    gsl_permutation *p;
-    int s;
-
-    v = gsl_vector_alloc(4);
-    m = gsl_matrix_alloc(4,4);
-    n = gsl_matrix_alloc(4,4);
-    gsl_matrix_set_all(m,0);
-    gsl_vector_set(v,0,x1);
-    gsl_vector_set(v,1,y1);
-    gsl_vector_set(v,2,0.0);
-    gsl_vector_set(v,3,1.0);
-
-    gsl_matrix_set(m,0,0,cos(t));
-    gsl_matrix_set(m,1,1,cos(t));
-    gsl_matrix_set(m,0,1,-sin(t));
-    gsl_matrix_set(m,1,0,sin(t));
-    gsl_matrix_set(m,2,2,1);
-    gsl_matrix_set(m,3,3,1);
-    gsl_matrix_set(m,0,3,x);
-    gsl_matrix_set(m,1,3,y);
-
-    p = gsl_permutation_alloc(4);
-    gsl_linalg_LU_decomp (m, p, &s);
-    gsl_linalg_LU_invert (m, p, n);
-
-    r = gsl_vector_alloc(4);
-    gsl_blas_dgemv(CblasNoTrans,1,n,v,0,r);
-
-    a = gsl_vector_get(r,0);
-    b = gsl_vector_get(r,1);
-
-    gsl_vector_free(v);
-    gsl_vector_free(r);
-    gsl_matrix_free(m);
-    gsl_matrix_free(n);
-    gsl_permutation_free(p);
-
-    //printf("p: %f %f",a,b);
-
-    return atan2(b,a);
+//    cv::Mat m = Mat::zeros(4,4,CV_32FC1),n(4,4,CV_32FC1);
+//    cv::Mat v(4,1,CV_32FC1),r;
+//    float a,b;
+//
+//    v.at<float>(0) = x1;
+//    v.at<float>(1) = y1;
+//    v.at<float>(2) = 0.0;
+//    v.at<float>(3) = 0.0;
+//
+//    m.at<float>(0,0) = cos(t);
+//    m.at<float>(1,1) = cos(t);
+//    m.at<float>(0,1) = -sin(t);
+//    m.at<float>(1,0) = sin(t);
+//    m.at<float>(2,2) = 1.0;
+//    m.at<float>(3,3) = 1.0;
+//    m.at<float>(0,3) = x;
+//    m.at<float>(1,3) = y;
+//
+//    invert(m,n,DECOMP_LU);
+//    r = n * v;
+//
+//    //printf("%d %d\n",r.rows,r.cols);
+//
+//    a = r.at<float>(0);
+//    b = r.at<float>(1);
+//
+//    m.release();
+//    n.release();
+//    v.release();
+//    r.release();
+    float vx = x1-x,vy = y1-y;
+    float a = atan2(vy,vx);
+    return (t-a);
 }

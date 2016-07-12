@@ -21,9 +21,15 @@ extern float vdd, rodaRaio, rodasDiff;
 float pose0[] = {0.8,0.0,pi};
 float estado[] = {0.0, 0.0, 0.0};
 
+float sensorFrontPos[3] = {0.03, 0, 0};
+float sensorLeftPos[3]  = {0.03, 0, M_PI/2};
+float sensorRightPos[3] = {0.03, 0, -M_PI/2};
 
 #define SEARCH_SQR 1.0
 #define MINPROB 10/((wmap/res) * (hmap/res) * 360)
+#define SONAR_ANGLE (7.5*pi/180)
+#define SONAR_DELTA (SONAR_ANGLE*2.0/10)
+#define SONAR_SIGMA 0.05
 
 typedef struct pose_d
 {
@@ -48,7 +54,9 @@ typedef struct Mapa
 
 
 Mapa mapmodel;
-pose_d dist[360], bel[360];
+pose_d dist[360];
+Mat bel;
+int cellx,celly;
 
 float menord(std::vector<float> v)
 {
@@ -148,15 +156,22 @@ void markov_load()
 {
     FILE *f = fopen("grid.txt","r");
     int npar;
-    int i,j,k, cellx = wmap/res,celly = hmap/res;
+    int i,j,k;
     int g0, g1, g2;
-
+    int sizesBel[3];
+    bel = 0.0;
+    cellx = (int)round(wmap/res);
+    celly = (int)round(hmap/res);
+    sizesBel[0] = celly;
+    sizesBel[1] = cellx;
+    sizesBel[2] = 360;
+    bel = Mat(3,sizesBel,CV_32FC1);
     for (i=0; i<360; i++)
     {
         dist[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
         dist[i].s1 = Mat(celly,cellx,CV_32FC1,0.0);
         dist[i].s2 = Mat(celly,cellx,CV_32FC1,0.0);
-        bel[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
+        //bel[i].s0 = Mat(celly,cellx,CV_32FC1,0.0);
     }
     fscanf(f,"%d",&npar);
     mapmodel.wall = (parede*) calloc(npar,sizeof(parede));
@@ -191,7 +206,8 @@ void markov_load()
         g2 = anthor(g2);
     }
     indexFor(pose0[0],pose0[1],&i,&j);
-    bel[(int)pose0[2]].s0.at<float>(i,j) = 1.0;
+    k = (int)round((pose0[2]*180/pi));
+    bel.at<float>(i,j,k) = 1.0;
     estado[0] = pose0[0];
     estado[1] = pose0[1];
     estado[2] = pose0[2];
@@ -202,10 +218,10 @@ void markov_free()
     int i;
     for (i=0; i<360; i++)
     {
-        dist[i].s0.empty();
-        dist[i].s1.empty();
-        dist[i].s2.empty();
-        bel[i].s0.empty();
+        dist[i].s0.release();
+        dist[i].s1.release();
+        dist[i].s2.release();
+        bel.release();
     }
     free(mapmodel.wall);
 }
@@ -281,7 +297,8 @@ float pGaussian(float dist, float sigma, float step)
 float to_positive_angle(float angle)
 {
     angle = fmod(angle, 2 * M_PI);
-    while (angle < 0) {
+    while (angle < 0)
+    {
         angle = angle + 2 * M_PI;
     }
     return angle;
@@ -340,10 +357,10 @@ void fdeltaRL(float theta, float ds, float dtheta, cv::Mat &FDrl)
 int actionUpdate(float dl, float dr)
 {
     int x,y,t,NUMBELX = wmap/res, NUMBELY = hmap/res;
-    int a,b,t0;
+    int a,b,t0,graus,graus2,t1,x1,y1;
     char newTeta;
     float dtheta = (dr - dl)/rodasDiff,blf,ds = (dr+dl)/2.0;
-    float costdt2,sintdt2;
+    float costdt2,sintdt2,sum = 0,cells = 0;
 
     cv::Mat X1(1,3, CV_32FC1), //current position [x,y,theta]
     X0(1,3, CV_32FC1), //previous position [x,y,theta]
@@ -360,14 +377,20 @@ int actionUpdate(float dl, float dr)
     Ed.at<float>(0,1) = 0;
     Ed.at<float>(1,0) = 0;
 
+    graus = 0;
     for (t=0; t<360; t++)
     {
         newTeta = 1;
+        X0.at<float>(0,2) = graus*(pi/180.0);
         for(x=0; x<NUMBELX; x++)
         {
             for(y=0; y<NUMBELY; y++)
             {
-                blf = bel[t].s0.at<float>(y,x);
+                float xp ,yp;
+                positionFor(y,x,&xp,&yp);
+                X0.at<float>(0,0) = xp;
+                X0.at<float>(0,1) = yp;
+                blf = bel.at<float>(y,x,t);
                 if(blf > MINPROB)
                 {
                     if (newTeta)
@@ -386,45 +409,50 @@ int actionUpdate(float dl, float dr)
                     //Update only a rectangle around X0
                     float dsrect = SEARCH_SQR*(fabs(ds)+res);
                     float dtrect = SEARCH_SQR*(fabs(dtheta)+pi/180.0);//2*(dtheta + 1 step) since dtheta can be 0
+                    int dtrect_gr = (int)(dtrect*180.0/pi);
                     float x1min[3], x1max[3];
+
                     //x1min
                     x1min[0] = M.at<float>(0,0)-dsrect;
-                    if (x1min[0]<-2) x1min[0] = -2;
+                    if (x1min[0]<-2) x1min[0] = -wmap/2;
                     x1min[1] = M.at<float>(0,1)-dsrect;
-                    if (x1min[1]<-2) x1min[1] = -2;
-                    x1min[2] = M.at<float>(0,2)-dtrect;
-                    if (x1min[2]<-M_PI) x1min[2] = -M_PI;
+                    if (x1min[1]<-2) x1min[1] = -hmap/2;
+                    x1min[2] = to180range(M.at<float>(0,2)-dtrect);
+                    //if (x1min[2]<-M_PI) x1min[2] = -M_PI;
 
                     //x1max
                     x1max[0] = M.at<float>(0,0)+dsrect;
-                    if (x1max[0]>2) x1max[0] = 2;
+                    if (x1max[0]>2) x1max[0] = wmap/2;
                     x1max[1] = M.at<float>(0,1)+dsrect;
-                    if (x1max[1]>2) x1max[1] = 2;
-                    x1max[2] = M.at<float>(0,2)+dtrect;
-                    if (x1max[2]>M_PI) x1max[2] = M_PI;
+                    if (x1max[1]>2) x1max[1] = hmap/2;
+                    x1max[2] = to180range(M.at<float>(0,2)+dtrect);
+                    //if (x1max[2]>M_PI) x1max[2] = M_PI;
 
                     //get map coordinates
-                    float mapmin[3], mapmax[3];
-                    worldToMap(x1min, mapmin);
-                    worldToMap(x1max, mapmax);
+                    int mapmin[3], mapmax[3];
 
-                    indexFor(ximin
+                    indexFor(x1min[0],x1min[1],&(mapmin[0]),&(mapmin[1]));
+                    indexFor(x1max[0],x1max[1],&(mapmax[0]),&(mapmax[1]));
 
-                    mapToWorld(mapmin, x1min);
-                    mapToWorld(mapmax, x1max);
+                    positionFor(mapmin[0],mapmin[1],&(x1min[0]),&(x1min[1]));
+                    positionFor(mapmax[0],mapmax[1],&(x1max[0]),&(x1max[1]));
 
 
 //                    printf("X0 = (%.2f,%.2f,%.2f) M = (%.2f,%.2f,%.2f)\n", X0.at<float>(0,0), X0.at<float>(0,1), X0.at<float>(0,2), M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2));
-
-                    for(X1.at<float>(0,2) = x1min[2], t1 =  mapmin[2]; t1<=mapmax[2]; X1.at<float>(0,2)+=2*M_PI/(BEL_NTHETA-1), t1++)  //for each new theta
+                    graus2 = (int)(x1min[2]*180.0/pi);
+                    for(t1=0; t1<=dtrect_gr; t1++)  //for each new theta
                     {
-                        for(X1.at<float>(0,0) = x1min[0], x1 =  mapmin[0]; x1<=mapmax[0]; X1.at<float>(0,0)+=4.0/(BEL_NXY-1), x1++)   //for each new x
+                        for(x1 =  mapmin[0]; x1<=mapmax[0]; x1++)   //for each new x
                         {
-                            for(X1.at<float>(0,1) = x1min[1], y1 =  mapmin[1]; y1<=mapmax[1]; X1.at<float>(0,1)+=4.0/(BEL_NXY-1), y1++)   //for each new y
+                            for(y1 =  mapmin[1]; y1<=mapmax[1]; y1++)   //for each new y
                             {
-
-                                float px1_u1x0 = pTrvGaussian(M, X1, Ep);
-                                sumbel.at<float>(x1,y1,t1) += blf*px1_u1x0;
+                                float px1_u1x0,px1,py1;
+                                positionFor(y1,x1,&px1,&py1);
+                                X1.at<float>(0,0) = px1;
+                                X1.at<float>(0,1) = py1;
+                                X1.at<float>(0,2) = graus2*pi/180.0;
+                                px1_u1x0 = pTrvGaussian(M, X1, Ep);
+                                sumbel.at<float>(y1,x1,t1) += blf*px1_u1x0;
                                 sum += blf*px1_u1x0;
                                 cells++;
 //                                if (px1_u1x0>0) {
@@ -432,12 +460,18 @@ int actionUpdate(float dl, float dr)
 //                                }
                             }
                         }
+                        graus2 = anthor(graus2);
                     }
                 }
             }
         }
+        graus = anthor(graus);
     }
-
+    if(sum > 0.0)
+    {
+        bel/sum;
+    }
+    return cells;
 }
 
 /*!
@@ -450,7 +484,7 @@ int markov_move(float dwl, float dwr)
     float ds,dl = dwl*rodaRaio, dr = dwr*rodaRaio;
     float dteta;
     float dx,dy;
-    int g,a,b,sigx,sigy;
+    //int g,a,b,sigx,sigy;
 
     dl = prevdl = prevdl + dl;
     dr = prevdr = prevdr + dr;
@@ -464,14 +498,104 @@ int markov_move(float dwl, float dwr)
     //estado[2] += dteta;
 
     //printf("x = %.3f y = %.3f\n",estado[0],estado[1]);
-    if (ds > 0.05 && dteta > pi/180)
-    {
+    //printf("%.3f %.3f\n",ds,dteta);
+    if (ds >= res && dteta >= pi/180.0)
+    {//printf("->%.3f %.3f\n",ds,dteta);
         prevdl = prevdr = 0.0;
         actionUpdate(dl,dr);
     }
 }
 
-void markov_correct()
+float nearesPointInMap(float *p, float *npl, int s)
 {
+    int i,j,graus;
+    indexFor(p[0],p[1],&i,&j);
+    graus = (int)round(p[2]*180.0/pi);
+    graus = graus < 0 ? (180 + (graus + 179)) : graus;
+    ideal_dist(s,p[0],p[1],graus);
+}
 
+void markov_correct(float distF, float distL, float distR)
+{
+    float robotPos[3]; //[x,y,theta]
+    int x,y,t,graus=0;
+    float sensorPoint[3], mapPoint[3];
+    float p, sum=0,b,mp=0.0,estadox,estadoy,estadot;
+
+    for(x=0; x<cellx; x++)
+    {
+        for(y=0; y<celly; y++)
+            for(t=0; t<360; t++)
+            {
+                robotPos[2] = graus*pi/180.0;
+                graus = anthor(graus);
+                positionFor(y,x,&(robotPos[0]),&(robotPos[1]));
+                b = bel.at<float>(y,x,t);
+
+                if (b>0)
+                {
+                    float stmin, stmax, d;
+                    float dF=999, dL=999, dR=999;
+                    float sensorDir[3];
+
+//            robotToSensorPoint(robotPos, sensorFrontPos, distF, sensorPoint);
+//            dF = nearesPointInMap(sensorPoint, mapPoint);
+
+                    sensorDir[0] = sensorFrontPos[0];
+                    sensorDir[1] = sensorFrontPos[1];
+                    stmin = sensorFrontPos[2]-SONAR_ANGLE;
+                    stmax = sensorFrontPos[2]+SONAR_ANGLE;
+                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
+                    {
+                        //robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
+                        d = nearesPointInMap(sensorPoint, mapPoint,0);
+                        if (d<dF) dF=d;
+                    }
+
+//            robotToSensorPoint(robotPos, sensorLeftPos, distL, sensorPoint);
+//            dL = nearesPointInMap(sensorPoint, mapPoint);
+                    sensorDir[0] = sensorLeftPos[0];
+                    sensorDir[1] = sensorLeftPos[1];
+                    stmin = sensorLeftPos[2]-SONAR_ANGLE;
+                    stmax = sensorLeftPos[2]+SONAR_ANGLE;
+                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
+                    {
+                        //robotToSensorPoint(robotPos, sensorDir, distL, sensorPoint);
+                        d = nearesPointInMap(sensorPoint, mapPoint,1);
+                        if (d<dL) dL=d;
+                    }
+
+//            robotToSensorPoint(robotPos, sensorRightPos, distR, sensorPoint);
+//            dR = nearesPointInMap(sensorPoint, mapPoint);
+                    sensorDir[0] = sensorRightPos[0];
+                    sensorDir[1] = sensorRightPos[1];
+                    stmin = sensorRightPos[2]-SONAR_ANGLE;
+                    stmax = sensorRightPos[2]+SONAR_ANGLE;
+                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
+                    {
+                        //robotToSensorPoint(robotPos, sensorDir, distR, sensorPoint);
+                        d = nearesPointInMap(sensorPoint, mapPoint,2);
+                        if (d<dR) dR=d;
+                    }
+
+                    p = pGaussian(dF, SONAR_SIGMA, res)*pGaussian(dL, SONAR_SIGMA, res)*pGaussian(dR, SONAR_SIGMA, res)*b;
+                    bel.at<float>(y,x,t) = p;
+                    sum+=p;
+                    printf("%.10f: %.2f %.2f %.2f\n%.2f %.2f %.2f\n",b,distF,distL,distR,dF,dL,dR);
+                    if(p>mp)
+                    {
+                        estadox = robotPos[0];
+                        estadoy = robotPos[1];
+                        estadot = robotPos[2];
+                        mp = p;
+                    }
+                }
+            }
+    }
+
+    if (sum>0)
+        bel = bel/sum;
+    estado[0] = estadox;
+    estado[1] = estadoy;
+    estado[2] = estadot;
 }

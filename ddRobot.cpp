@@ -42,6 +42,9 @@ simxInt graphOdometryHandle;
 simxInt caminhoHandle;
 simxInt pathPlanTaskHandle;
 simxInt fimHandle;
+simxInt sensorFrontHandle;
+simxInt sensorLeftHandle;
+simxInt sensorRightHandle;
 
 float vdd = 0.002, rodaRaio = 0.0325, rodasDiff = 0.15;
 
@@ -49,6 +52,7 @@ extern float estado[];
 
 int rotaflag;
 
+float smallestAngleDiff(float target, float source);
 
 void stopOdom();
 void startOdom();
@@ -56,62 +60,13 @@ void startOdom();
 void markov_load();
 void markov_free();
 int markov_move(float dwl, float dwr);
-void markov_correct();
+void markov_correct(float distF, float distL, float distR);
 
 float ideal_dist(int s, float x ,float y, int tht);
-
-void getPosition(int clientID, simxFloat pos[])   //[x,y,theta]
-{
-
-    simxInt ret = simxGetObjectPosition(clientID, ddRobotHandle, -1, pos, simx_opmode_oneshot_wait);
-    if (ret > 0)
-    {
-        printf("Error reading robot position\n");
-        return;
-    }
-
-    simxFloat orientation[3];
-    ret = simxGetObjectOrientation(clientID, ddRobotHandle, -1, orientation, simx_opmode_oneshot_wait);
-    if (ret > 0)
-    {
-        printf("Error reading robot orientation\n");
-        return;
-    }
-
-    simxFloat theta = orientation[2];
-    pos[2] = theta;
-}
 
 simxInt getSimTimeMs(int clientID)   //In Miliseconds
 {
     return simxGetLastCmdTime(clientID);
-}
-
-float to_positive_angle(float angle)
-{
-
-    angle = fmod(angle, 2 * M_PI);
-    while (angle < 0)
-    {
-        angle = angle + 2 * M_PI;
-    }
-    return angle;
-}
-
-float smallestAngleDiff(float target, float source)
-{
-    float a;
-    a = to_positive_angle(target) - to_positive_angle(source);
-
-    if (a > M_PI)
-    {
-        a = a - 2 * M_PI;
-    }
-    else if (a < -M_PI)
-    {
-        a = a + 2 * M_PI;
-    }
-    return a;
 }
 
 int readOdometers(int clientID, simxFloat &dwL, simxFloat &dwR)
@@ -125,7 +80,8 @@ int readOdometers(int clientID, simxFloat &dwL, simxFloat &dwR)
     simxFloat lwcur=0;
     simxFloat rwcur=0;
 
-    if (first) {
+    if (first)
+    {
         simxInt ret = simxGetJointPosition(clientID, leftMotorHandle, &lwprev, simx_opmode_streaming);
         if (ret>0) return -1;
 
@@ -148,7 +104,8 @@ int readOdometers(int clientID, simxFloat &dwL, simxFloat &dwR)
 //    dwR = rwcur - rwprev;
 //    dwL = lwcur - lwprev;
 
-    if (fabs(dwR)>M_PI || fabs(dwL)>M_PI) {
+    if (fabs(dwR)>M_PI || fabs(dwL)>M_PI)
+    {
         printf("wL: %f - (%f) = %f\n", lwcur, lwprev, dwL);
         printf("wR: %f - (%f) = %f\n", rwcur, rwprev, dwR);
         lwprev = lwcur;
@@ -165,11 +122,6 @@ void setTargetSpeed(int clientID, simxFloat phiL, simxFloat phiR)
 {
     simxSetJointTargetVelocity(clientID, leftMotorHandle, phiL, simx_opmode_oneshot);
     simxSetJointTargetVelocity(clientID, rightMotorHandle, phiR, simx_opmode_oneshot);
-}
-
-inline double to_deg(double radians)
-{
-    return radians * (180.0 / M_PI);
 }
 
 char* droppoint (char *p, float *x, float *y)
@@ -207,12 +159,16 @@ int main(int argc, char* argv[])
     simxFloat lwcur,rwcur;
 
     clientID = simxStart((simxChar*) (simxChar*) ipAddr, portNb, true, true, 2000, 5);
+    //if (clientID < 1) return 0;
 
     //Get handles for robot parts, actuators and sensores:
     simxGetObjectHandle(clientID, "RobotFrame#", &ddRobotHandle, simx_opmode_oneshot_wait);
     simxGetObjectHandle(clientID, "LeftMotor#", &leftMotorHandle, simx_opmode_oneshot_wait);
     simxGetObjectHandle(clientID, "RightMotor#", &rightMotorHandle, simx_opmode_oneshot_wait);
     simxGetObjectHandle(clientID, "GraphOdometry#", &graphOdometryHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "ProximitySensorF#", &sensorFrontHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "ProximitySensorL#", &sensorLeftHandle, simx_opmode_oneshot_wait);
+    simxGetObjectHandle(clientID, "ProximitySensorR#", &sensorRightHandle, simx_opmode_oneshot_wait);
     printf("Iniciando conexao com: %s...\n", ipAddr);
 
     printf("Conexao efetuada\n");
@@ -220,14 +176,18 @@ int main(int argc, char* argv[])
     int ret = simxStartSimulation(clientID, simx_opmode_oneshot_wait);
     t0 = clock();
     c=0;
-    strcpy(strrota,"-0,4;-0,4");
+    strcpy(strrota,"0,0;0,0");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
-    //markov_load();
+    markov_load();
     startOdom();
     rotaflag = 1;
-    for(;rotaflag;)
+    for(; rotaflag;)
     {
+        //getPosition(clientID,estado);
+        //markov_pos(estado);
+        sx = estado[0];
+        sy = estado[1];
         distp = sqrt((x-sx)*(x-sx) + (y-sy)*(y-sy));
         if (distp < 0.1)
         {
@@ -238,14 +198,12 @@ int main(int argc, char* argv[])
                 break;
             }
         }
-        //getPosition(clientID,estado);
-        sx = estado[0];
-        sy = estado[1];
         cam_pos[0] = x;
         cam_pos[1] = y;
-        phi = -calcphi(estado,cam_pos);//atan2(y-sy,x-sx);
-        v_des = 0.02;
-        om_des=0.2*phi;
+        phi = calcphi(estado,cam_pos);//atan2(y-sy,x-sx);
+        v_des = 0.01;
+        om_des=0.5*phi;
+        //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
         d=rodasDiff;
         v_r=(v_des-d*om_des);
         v_l=(v_des+d*om_des);
@@ -255,11 +213,24 @@ int main(int argc, char* argv[])
         setTargetSpeed(clientID, omega_left, omega_right);
     }
     stopOdom();
-    //markov_free();
+    markov_free();
     //simxPauseSimulation(clientID, simx_opmode_oneshot_wait);
     simxStopSimulation(clientID,simx_opmode_oneshot_wait);
     simxFinish(clientID);
     return 0;
+}
+
+simxFloat readSonar(int clientID, simxInt sensorHandle)
+{
+    simxFloat detectedPoint[3];
+    simxUChar detectionState=1;
+    simxInt ret = simxReadProximitySensor(clientID, sensorHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_buffer);
+
+    //printf("ret: %d ds: %d\n", ret, detectionState);
+    if (ret<=0 && detectionState==1)
+        return detectedPoint[2];
+
+    return -1;
 }
 
 void* odom(void* arg)
@@ -269,27 +240,22 @@ void* odom(void* arg)
     simxFloat dFiL, dFiR;
     t0 = clock();
     cells = 1;
+    simxFloat detectedPoint[3];
+    simxUChar detectionState=1;
+    simxReadProximitySensor(clid, sensorFrontHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_streaming);
+    simxReadProximitySensor(clid, sensorLeftHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_streaming);
+    simxReadProximitySensor(clid, sensorRightHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_streaming);
     while (readingOdo)
     {
-        //tt = CLOCKS_PER_SEC;
-        //tt = (clock() - t0)/tt;
-        //tt = tt * 1000;
-        //if (tt > 100.0)
-        //{
-            //t0 = clock();
-            if (cells > 1)
-                markov_correct();
-            readOdometers(clid, dFiL, dFiR);
-            //if (lcm15 > 0.05 || rcm15 > 0.05)
-            //{
-                //printf("%.3f %.3f\n",lcm15,rcm15);
-                cells = markov_move(dFiL,dFiR);
-                //fflush(stdout);
-                //if (lcm15 > 1.0 || rcm15 > 1.0)
-                //    rotaflag = 0;
-            //}
-            //extApi_sleepMs(5);
-        //}
+        simxFloat distF=-1, distR=-1, distL=-1;
+        readOdometers(clid, dFiL, dFiR);
+        cells = markov_move(dFiL,dFiR);
+        distF = readSonar(clid, sensorFrontHandle);
+        distL = readSonar(clid, sensorLeftHandle);
+        distR = readSonar(clid, sensorRightHandle);
+        if (cells > 0 && distF > 0.0 && distL > 0.0 && distR > 0.0)
+            markov_correct(distF,distR,distL);
+        //extApi_sleepMs(2);
     }
     readingOdo = 1;
     return NULL;
@@ -308,6 +274,6 @@ void startOdom()
 void stopOdom()
 {
     readingOdo = 0;
-    while(!readingOdo){}
+    while(!readingOdo) {}
     readingOdo = 0;
 }

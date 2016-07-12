@@ -31,13 +31,10 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
-			<Add directory="../../Documents/gsl_inst/include" />
 			<Add directory="../../Documents/opencv_inst/include" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
-			<Add library="../../Documents/gsl_inst/lib/libgsl.a" />
-			<Add library="../../Documents/gsl_inst/lib/libgslcblas.a" />
 			<Add library="../../Documents/opencv_inst/lib/cv2.so" />
 			<Add library="../../Documents/opencv_inst/lib/libopencv_calib3d.so" />
 			<Add library="../../Documents/opencv_inst/lib/libopencv_calib3d_pch_dephelp.a" />

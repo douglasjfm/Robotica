@@ -65,25 +65,25 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
+1468244921 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
 	"extApi.h"
 	"extApiInternal.h"
 	<stdio.h>
 	"extApiJava.h"
 
-1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
+1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
 	"extApiPlatform.h"
 	"../include/v_repConst.h"
 
-1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
+1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
 	<stdint.h>
 
-1467988945 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
+1468244921 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
 
-1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
+1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
 	"extApiPlatform.h"
 
-1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
+1468244921 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
 	"extApiPlatform.h"
 	<stdio.h>
 	<Windows.h>
@@ -98,7 +98,7 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1468005139 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+1468280365 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -233,7 +233,7 @@
 1397211326 /usr/local/include/opencv2/core/core_c.h
 	"opencv2/core/types_c.h"
 
-1468009227 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
+1468281099 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
 	<vector>
 	<math.h>
 	<stdio.h>
@@ -634,13 +634,11 @@
 1446567715 /home/CIN/djfm/Downloads/gsl-2.1/gsl/gsl_minmax.h
 	<gsl/gsl_inline.h>
 
-1467989118 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
+1468257559 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
 	<math.h>
-	<gsl/gsl_matrix.h>
-	<gsl/gsl_vector.h>
-	<gsl/gsl_blas.h>
-	<gsl/gsl_permutation.h>
-	<gsl/gsl_linalg.h>
+	<stdio.h>
+	<opencv2/core/core.hpp>
+	<opencv2/highgui/highgui.hpp>
 
 1467741774 /home/CIN/djfm/Documents/gsl_inst/include/gsl/gsl_matrix.h
 	<gsl/gsl_matrix_complex_long_double.h>
