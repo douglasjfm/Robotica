@@ -498,9 +498,9 @@ int actionUpdate(float dl, float dr)
 /*!
    Markov Action Update
 */
-int markov_move(float dwl, float dwr)
+int markov_move(double dwl, double dwr)
 {
-    static float prevdl = 0.0, prevdr = 0.0;
+    static double prevdl = 0.0, prevdr = 0.0;
     float ds,dl = dwl*rodaRaio, dr = dwr*rodaRaio;
     float dteta;
     //int g,a,b,sigx,sigy;
@@ -574,7 +574,7 @@ void markov_correct(float distF, float distL, float distR)
     int x,y,t,graus=0;
     float sensorPoint[3], mapPoint[3];
     float p, sum=0,b,mp=0.0,estadox = estado[0],estadoy=estado[1],estadot=estado[2];
-printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
+//printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)

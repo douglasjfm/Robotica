@@ -23,7 +23,7 @@ static int maxDeltaT = 250000;
 void countLeft() {
     static rbtTime lastTime = RobotTimer::getTime_us();
     rbtTime now = RobotTimer::getTime_us();
-    
+
     rbtTime dt = now - lastTime;
     if (dt>minDeltaT) { // Filtra pulsos expurios em menos de dt us
     	leftEncoder->updateSpeed(now);
@@ -62,7 +62,7 @@ void Encoder::updateSpeed(rbtTime now) { //On Edge Interrupt
 }
 
 float Encoder::filter(float pulseSpeed) {
-	
+
 	//adiciona ao buffer
 	buffer[b] = pulseSpeed;
 	b = (b+1)%NBUF;
