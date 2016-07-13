@@ -18,7 +18,7 @@ float Kl = 1.0;
 
 extern float vdd, rodaRaio, rodasDiff;
 
-float pose0[] = {0.8,0.0,pi};
+float pose0[] = {0.93,0.0,pi};
 float estado[] = {0.0, 0.0, 0.0};
 
 float sensorFrontPos[3] = {0.03, 0, 0};
@@ -196,9 +196,9 @@ void markov_load()
                 g0 = i;
                 g1 = i+90;
                 g2 = i+270;
-                dist[i].s0.at<float>(k,j) = colisao(xc,yc,g0,&mapmodel);
-                dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);
-                dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);
+                dist[i].s0.at<float>(k,j) = colisao(xc,yc,g0,&mapmodel);///sensorF
+                dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);///sensorL
+                dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);///sensorR
             }
         g0 = anthor(g0);
         g1 = anthor(g1);

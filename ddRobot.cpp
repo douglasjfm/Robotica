@@ -35,8 +35,6 @@ float vdd = 0.07, rodaRaio = 0.0325, rodasDiff = 0.15;
 
 extern float estado[];
 
-int rotaflag;
-
 float smallestAngleDiff(float target, float source);
 
 void stopOdom();
@@ -103,13 +101,12 @@ int main(int argc, char* argv[])
 	motorL.pid.setKp(0.1);
 	motorR.pid.setKp(0.1);
 
-    strcpy(strrota,"-0,4;0,2|0,0;0,0");
+    strcpy(strrota,"-0,85;-0,275|-0,825;-0,85");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
     markov_load();
     startOdom();
-    rotaflag = 1;
-    for(; rotaflag;)
+    for(; ;)
     {
         //getPosition(clientID,estado);
         //markov_pos(estado);
@@ -148,7 +145,7 @@ void* odom(void* arg)
 {
     int cells;
     double dwl,dwr;
-    float l = rodasDiff/2, r = rodaRaio,opos[3];
+    float l = rodasDiff/2, r = rodaRaio;
 	Odometry odometry(l, l, r, r, &encoderL, &encoderR);
     cells = 1;
     odometry.setPosition(estado);
