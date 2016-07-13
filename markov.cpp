@@ -18,7 +18,7 @@ float Kl = 1.0;
 
 extern float vdd, rodaRaio, rodasDiff;
 
-float pose0[] = {0.8,0.0,pi};
+float pose0[] = {0.93,0.0,pi};
 float estado[] = {0.0, 0.0, 0.0};
 
 float sensorFrontPos[3] = {0.03, 0, 0};
@@ -29,7 +29,7 @@ float sensorRightPos[3] = {0.03, 0, -M_PI/2};
 #define MINPROB 10/((wmap/res) * (hmap/res) * 360)
 #define SONAR_ANGLE (7.5*pi/180)
 #define SONAR_DELTA (SONAR_ANGLE*2.0/10)
-#define SONAR_SIGMA 0.05
+#define SONAR_SIGMA 0.1
 
 typedef struct pose_d
 {
@@ -262,6 +262,10 @@ float to180range(float angle)
     return angle;
 }
 
+/*!
+    Returns the probability that the observed value of a standard normal
+    random variable will be less than or equal to x.
+*/
 double z(double x) //normal pdf
 {
     // constants
@@ -291,6 +295,12 @@ float pGaussian(float dist, float sigma, float step)
     float halfstep = step/2.0;
     float zmax = (x+halfstep)/sigma;
     float zmin = (x-halfstep)/sigma;
+    if (zmax<zmin)
+    {
+        float swp = zmin;
+        zmin = zmax;
+        zmax = swp;
+    }
     return z(zmax) - z(zmin);
 }
 
@@ -357,7 +367,7 @@ void fdeltaRL(float theta, float ds, float dtheta, cv::Mat &FDrl)
 int grausTo360(int g)
 {
     if(g < 0 && g >= -180)
-        return (360-g);
+        return (360+g);
     return g;
 }
 
@@ -491,7 +501,7 @@ int actionUpdate(float dl, float dr)
     {
         bel/sum;
     }
-    printf("%d updated cells\n",cells);
+    //printf("%d updated cells\n",cells);
     return cells;
 }
 
@@ -510,7 +520,7 @@ int markov_move(float dwl, float dwr)
 
     estado[0] += ds*cos(dteta+estado[2]);
     estado[1] += ds*sin(dteta+estado[2]);
-    estado[2] += dteta;
+    estado[2] += dteta;// to180range(estado[2] + dteta);
 
     dl = prevdl = prevdl + dl;
     dr = prevdr = prevdr + dr;
@@ -525,7 +535,7 @@ int markov_move(float dwl, float dwr)
 
     //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
     //printf("%.3f %.3f\n",ds,dteta);
-    if (ds > res && fabs(dteta) > pi/180.0)
+    if (ds > res || fabs(dteta) > pi/180.0)
     {
         //printf("->%.3f %.3f\n",ds,dteta);
         prevdl = prevdr = 0.0;
@@ -571,10 +581,11 @@ void robotToSensorPoint(float *pRobot, float *pSensor, float dist, float* point)
 void markov_correct(float distF, float distL, float distR)
 {
     float robotPos[3]; //[x,y,theta]
-    int x,y,t,graus=0;
+    int x,y,t,graus=0,g15;
     float sensorPoint[3], mapPoint[3];
     float p, sum=0,b,mp=0.0,estadox = estado[0],estadoy=estado[1],estadot=estado[2];
 printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
+printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)
@@ -590,56 +601,47 @@ printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
                     float stmin, stmax, d;
                     float dF=999, dL=999, dR=999;
                     float sensorDir[3];
+                    int sensorDr;
 
 //            robotToSensorPoint(robotPos, sensorFrontPos, distF, sensorPoint);
 //            dF = nearesPointInMap(sensorPoint, mapPoint);
 
-                    sensorDir[0] = sensorFrontPos[0];
-                    sensorDir[1] = sensorFrontPos[1];
-                    stmin = sensorFrontPos[2]-SONAR_ANGLE;
-                    stmax = sensorFrontPos[2]+SONAR_ANGLE;
-                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
+                    //sensorDir[0] = sensorFrontPos[0];
+                    //sensorDir[1] = sensorFrontPos[1];
+                    //stmin = sensorFrontPos[2]-SONAR_ANGLE;
+                    //stmax = sensorFrontPos[2]+SONAR_ANGLE;
+                    //for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
+                    sensorDr = robotPos[2]*180.0/pi;
+                    sensorDr = grausTo360(sensorDr);
+                    sensorDr -= 8;
+                    sensorDr = grausTo360(sensorDr);
+                    for(g15=0;g15 < 15; g15++)
                     {
-                        robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
-                        d = nearesPointInMap(sensorPoint, mapPoint,0);
-                        if (d<dF) dF=d;
+                        //robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
+                        //d = nearesPointInMap(sensorPoint, mapPoint,0);
+                        d = ideal_dist(0,robotPos[0],robotPos[1],sensorDr);
+                        //sensorDr = grausTo360(anthor(sensorDr));
+                        if (d<dF && d>0.0) dF=d;
+                        d = ideal_dist(1,robotPos[0],robotPos[1],sensorDr);
+                        //sensorDr = grausTo360(anthor(sensorDr));
+                        if (d<dL && d>0.0) dL=d;
+                        d = ideal_dist(2,robotPos[0],robotPos[1],sensorDr);
+                        sensorDr = grausTo360(anthor(sensorDr));
+                        if (d<dR && d>0.0) dR=d;
                     }
-
-//            robotToSensorPoint(robotPos, sensorLeftPos, distL, sensorPoint);
-//            dL = nearesPointInMap(sensorPoint, mapPoint);
-                    sensorDir[0] = sensorLeftPos[0];
-                    sensorDir[1] = sensorLeftPos[1];
-                    stmin = sensorLeftPos[2]-SONAR_ANGLE;
-                    stmax = sensorLeftPos[2]+SONAR_ANGLE;
-                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
-                    {
-                        robotToSensorPoint(robotPos, sensorDir, distL, sensorPoint);
-                        d = nearesPointInMap(sensorPoint, mapPoint,1);
-                        if (d<dL) dL=d;
-                    }
-
-//            robotToSensorPoint(robotPos, sensorRightPos, distR, sensorPoint);
-//            dR = nearesPointInMap(sensorPoint, mapPoint);
-                    sensorDir[0] = sensorRightPos[0];
-                    sensorDir[1] = sensorRightPos[1];
-                    stmin = sensorRightPos[2]-SONAR_ANGLE;
-                    stmax = sensorRightPos[2]+SONAR_ANGLE;
-                    for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
-                    {
-                        robotToSensorPoint(robotPos, sensorDir, distR, sensorPoint);
-                        d = nearesPointInMap(sensorPoint, mapPoint,2);
-                        if (d<dR) dR=d;
-                    }
-
-                    p = pGaussian(dF, SONAR_SIGMA, res)*pGaussian(dL, SONAR_SIGMA, res)*pGaussian(dR, SONAR_SIGMA, res)*b;
+                    dF = pGaussian(distF-dF, SONAR_SIGMA, res);
+                    dL = pGaussian(distL-dL, SONAR_SIGMA, res);
+                    dR = pGaussian(distR-dR, SONAR_SIGMA, res);
+                    p = dF*dL*dR*b;
                     bel.at<float>(y,x,t) = p;
                     sum+=p;
-                    printf("%.10f: %.2f %.2f %.2f\n%.2f %.2f %.2f\n",p,distF,distL,distR,dF,dL,dR);
                     if(p>mp)
                     {
+                        //printf("->L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
                         estadox = robotPos[0];
                         estadoy = robotPos[1];
                         estadot = robotPos[2];
+                        printf("x = %.2f y = %.2f t = %.2f\n",estadox,estadoy,estadot);
                         mp = p;
                     }
                 }
@@ -648,7 +650,7 @@ printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
 
     if (sum>0)
         bel = bel/sum;
-    estado[0] = estadox;
-    estado[1] = estadoy;
-    estado[2] = estadot;
+    //estado[0] = estadox;
+    //estado[1] = estadoy;
+    //estado[2] = estadot;
 }

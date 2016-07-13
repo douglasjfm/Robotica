@@ -28,6 +28,8 @@
 #include "remoteApi/extApi.h"
 #include "include/v_repConst.h"
 #include "remoteApi/extApiPlatform.h"
+
+#define pi M_PI
 /*	#include "extApiCustom.h" if you wanna use custom remote API functions! */
 
 int readingOdo;
@@ -46,7 +48,7 @@ simxInt sensorFrontHandle;
 simxInt sensorLeftHandle;
 simxInt sensorRightHandle;
 
-float vdd = 0.07, rodaRaio = 0.0325, rodasDiff = 0.15;
+float vdd = 0.03, rodaRaio = 0.0325, rodasDiff = 0.15;
 
 extern float estado[];
 
@@ -145,7 +147,12 @@ float trans_get_phi (float x, float y, float t, float x1, float y1);
 
 float calcphi (float xyt[3], float pxy[3])
 {
-    return trans_get_phi(xyt[0],xyt[1],xyt[2],pxy[0],pxy[1]);
+    float phi = trans_get_phi(xyt[0],xyt[1],xyt[2],pxy[0],pxy[1]);
+    if (phi>pi)
+    {
+        phi = phi - 2*pi;
+    }
+    return phi;
 }
 
 int main(int argc, char* argv[])
@@ -172,7 +179,9 @@ int main(int argc, char* argv[])
     printf("Conexao efetuada\n");
 
     simxStartSimulation(clientID, simx_opmode_oneshot_wait);
-    strcpy(strrota,"-0,4;0,2|0,0;0,0");
+    setTargetSpeed(clientID, 0, 0);
+    //strcpy(strrota,"-0,85;-0,275|-0,825;-0,85");
+    strcpy(strrota,"-0,85;-0,275|-0,825;-0,85");
     prota = droppoint(strrota,&x,&y);
     printf("goal: %.2f %.2f\n",x,y);
     markov_load();
@@ -185,7 +194,7 @@ int main(int argc, char* argv[])
         sx = estado[0];
         sy = estado[1];
         distp = sqrt((x-sx)*(x-sx) + (y-sy)*(y-sy));
-        if (distp < 0.1)
+        if (distp < 0.01)
         {
             prota = droppoint(prota,&x,&y);
             if(!prota)
@@ -193,6 +202,7 @@ int main(int argc, char* argv[])
                 setTargetSpeed(clientID, 0, 0);
                 break;
             }
+            printf("goal: %.2f %.2f\n",x,y);
         }
         cam_pos[0] = x;
         cam_pos[1] = y;
@@ -231,9 +241,9 @@ simxFloat readSonar(int clientID, simxInt sensorHandle)
 
 void* odom(void* arg)
 {
-    int clid = clientID, cells;
+    int clid = clientID, cells,sfails=0,sok=0;
     simxFloat dFiL, dFiR;
-    cells = 1;
+    cells = 0;
     simxFloat detectedPoint[3];
     simxUChar detectionState=1;
     simxReadProximitySensor(clid, sensorFrontHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_streaming);
@@ -246,13 +256,15 @@ void* odom(void* arg)
         distL = readSonar(clid, sensorLeftHandle);
         distR = readSonar(clid, sensorRightHandle);
         if (cells > 0 && distF > 0.0 && distL > 0.0 && distR > 0.0)
-            markov_correct(distF,distR,distL);
+            {markov_correct(distF,distR,distL);sok++;}
+        else sfails++;
 
         readOdometers(clid, dFiL, dFiR);
         cells = markov_move(dFiL,dFiR);
 
         extApi_sleepMs(2);
     }
+    printf("falhas/suc sensores: %d-%d\n",sfails,sok);
     readingOdo = 1;
     return NULL;
 }
