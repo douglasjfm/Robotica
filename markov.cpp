@@ -8,22 +8,17 @@
 
 using namespace cv;
 
-int nsen = 3;
-float wmap = 2.2;
-float hmap = 2.2;
-float res = 0.05;
+float wmap = 2.2;///Largura do Mapa
+float hmap = 2.2;///Comprimento do mapa
+float res = 0.05;///Resolução
 
 float Kr = 1.0;
 float Kl = 1.0;
 
 extern float vdd, rodaRaio, rodasDiff;
 
-float pose0[] = {0.93,0.0,pi};
-float estado[] = {0.0, 0.0, 0.0};
-
-float sensorFrontPos[3] = {0.03, 0, 0};
-float sensorLeftPos[3]  = {0.03, 0, M_PI/2};
-float sensorRightPos[3] = {0.03, 0, -M_PI/2};
+float pose0[] = {0.0,0.0,pi};///Pose inicial do Robo
+float estado[] = {0.0, 0.0, 0.0};///Armazena o estado atual do robo (em tempo de execução, claro)
 
 #define SEARCH_SQR 1.0
 #define MINPROB 10/((wmap/res) * (hmap/res) * 360)
@@ -69,10 +64,17 @@ float menord(std::vector<float> v)
 }
 
 ///Realiza o incremento anti horario de 0 a 180 e de -179 a 0 graus.
-int anthor(int i)
+int anthor180(int i)
 {
     int r;
     (i == 179) ? r = -180 : r = i+1;
+    return r;
+}
+
+int anthor360(int i)
+{
+    int r;
+    (i == 359) ? r = 0 : r = i+1;
     return r;
 }
 
@@ -85,6 +87,7 @@ int congr(float a, float b)
     return ((dc < 0.0001) && (ds < 0.0001));
 }
 
+///Funçao que calcula o ponto mais proximo dada a pose (x,y,grau) e o modelo de mapa
 float colisao(float x, float y,int grau,Mapa *modelo)
 {
     float tht;
@@ -200,9 +203,9 @@ void markov_load()
                 dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);
                 dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);
             }
-        g0 = anthor(g0);
-        g1 = anthor(g1);
-        g2 = anthor(g2);
+        g0 = anthor360(g0);
+        g1 = anthor360(g1);
+        g2 = anthor360(g2);
     }
     indexFor(pose0[0],pose0[1],&i,&j);
     k = (int)round((pose0[2]*180/pi));
@@ -226,6 +229,8 @@ void markov_free()
     free(mapmodel.wall);
 }
 
+///Retorna a distancia calculada a partir do modelo do mapa
+///para o sensor s na pose (x,y,tht em graus)
 float ideal_dist(int s, float x ,float y, int tht)
 {
     int i,j,g;
@@ -289,9 +294,14 @@ double z(double x) //normal pdf
     return 0.5*(1.0 + sign*y);
 }
 
-float pGaussian(float dist, float sigma, float step)
+/*!
+    detalhes dessa implementação em http://www.codeproject.com/Articles/408214/Excel-Function-NORMSDIST-z
+    Retorna a probabilidade de se observar o sinal no range [med-step,med+step], ou seja uma distribuição Normal
+    com media como med e sigma como desvio padrao.
+*/
+float pGaussian(float med, float sigma, float step)
 {
-    float x = fabs(dist);
+    float x = fabs(med);
     float halfstep = step/2.0;
     float zmax = (x+halfstep)/sigma;
     float zmin = (x-halfstep)/sigma;
@@ -367,7 +377,7 @@ void fdeltaRL(float theta, float ds, float dtheta, cv::Mat &FDrl)
 int grausTo360(int g)
 {
     if(g < 0 && g >= -180)
-        return (360+g);
+        return (359+g);
     return g;
 }
 
@@ -485,35 +495,32 @@ int actionUpdate(float dl, float dr)
                                 sumbel.at<float>(y1,x1,grausTo360(t1)) += blf*px1_u1x0;
                                 sum += blf*px1_u1x0;
                                 cells++;
-                                if (px1_u1x0>0) {
+                                if (px1_u1x0>0.000000001) {
                                     printf("px1_u1x0(%.2f,%.2f,%.2f | %.2f,%.2f,%.2f): p:%f  b:%f pb:%f\n", X1.at<float>(0,0), X1.at<float>(0,1), X1.at<float>(0,2), M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2), px1_u1x0, blf, px1_u1x0*blf);
                                 }
                             }
                         }
-                        graus2 = anthor(graus2);
+                        graus2 = anthor180(graus2);
                     }
                 }
             }
         }
-        graus = anthor(graus);
+        graus = anthor360(graus);
     }
     if(sum > 0.0)
     {
-        bel/sum;
+        bel = sumbel/sum;
     }
     printf("%d updated cells\n",cells);
     return cells;
 }
 
+///Trata para que (t+dt) permaneça dentro do range [-pi...0...pi]
 float tratarDteta(float t, float dt)
 {
     float r;
     r = (dt+t);
-    if (r < -pi)
-        r = pi - fabs(r - pi);
-    if (r > pi)
-        r = r - pi - pi;
-    return r;
+    return to180range(r);
 }
 
 /*!
@@ -591,59 +598,48 @@ void robotToSensorPoint(float *pRobot, float *pSensor, float dist, float* point)
 /*! Markov Update Perception*/
 void markov_correct(float distF, float distL, float distR)
 {
-    float robotPos[3]; //[x,y,theta]
-    int x,y,t,graus=0,g15;
-    float sensorPoint[3], mapPoint[3];
+    float robotPos[3];
+    int x,y,t,graus=0,g15,celulas_visitadas = 0;
     float p, sum=0,b,mp=0.0,estadox = estado[0],estadoy=estado[1],estadot=estado[2];
-//printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
-//printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)
             for(t=0; t<360; t++)
             {
                 robotPos[2] = graus*pi/180.0;
-                graus = anthor(graus);
+                graus = anthor180(graus);
                 positionFor(y,x,&(robotPos[0]),&(robotPos[1]));
                 b = bel.at<float>(y,x,t);
 
                 if (b>0.0)
                 {
-                    float stmin, stmax, d;
                     float dF=999, dL=999, dR=999;
-                    float sensorDir[3];
+                    float pF,pL,pR;
+                    float d;
                     int sensorDr;
 
-//            robotToSensorPoint(robotPos, sensorFrontPos, distF, sensorPoint);
-//            dF = nearesPointInMap(sensorPoint, mapPoint);
+                    celulas_visitadas++;
 
-                    //sensorDir[0] = sensorFrontPos[0];
-                    //sensorDir[1] = sensorFrontPos[1];
-                    //stmin = sensorFrontPos[2]-SONAR_ANGLE;
-                    //stmax = sensorFrontPos[2]+SONAR_ANGLE;
-                    //for (sensorDir[2] = stmin; sensorDir[2]<=stmax; sensorDir[2]+=SONAR_DELTA)
                     sensorDr = robotPos[2]*180.0/pi;
                     sensorDr = grausTo360(sensorDr);
                     sensorDr -= 8;
                     sensorDr = grausTo360(sensorDr);
                     for(g15=0;g15 < 15; g15++)
                     {
-                        //robotToSensorPoint(robotPos, sensorDir, distF, sensorPoint);
-                        //d = nearesPointInMap(sensorPoint, mapPoint,0);
                         d = ideal_dist(0,robotPos[0],robotPos[1],sensorDr);
-                        //sensorDr = grausTo360(anthor(sensorDr));
                         if (d<dF && d>0.0) dF=d;
                         d = ideal_dist(1,robotPos[0],robotPos[1],sensorDr);
-                        //sensorDr = grausTo360(anthor(sensorDr));
                         if (d<dL && d>0.0) dL=d;
                         d = ideal_dist(2,robotPos[0],robotPos[1],sensorDr);
-                        sensorDr = grausTo360(anthor(sensorDr));
+                        sensorDr = anthor360(sensorDr);
                         if (d<dR && d>0.0) dR=d;
                     }
-                    dF = pGaussian(distF-dF, 2*SONAR_SIGMA, res);
-                    dL = pGaussian(distL-dL, SONAR_SIGMA, res);
-                    dR = pGaussian(distR-dR, SONAR_SIGMA, res);
-                    p = dF*dL*dR*b;
+
+                    pF = pGaussian(distF-dF, SONAR_SIGMA, res);
+                    pL = pGaussian(distL-dL, SONAR_SIGMA, res);
+                    pR = pGaussian(distR-dR, SONAR_SIGMA, res);
+
+                    p = pF*pL*pR*b;
                     bel.at<float>(y,x,t) = p;
                     sum+=p;
                     if(p>mp)
@@ -653,6 +649,7 @@ void markov_correct(float distF, float distL, float distR)
                         estadoy = robotPos[1];
                         estadot = robotPos[2];
                         printf("F = %.2f L = %.2f R = %.3f\n",distF,distL,distR);
+                        printf("P = %.10f\n",p);
                         printf("x = %.2f y = %.2f t = %.3f\n",estadox,estadoy,estadot);
                         mp = p;
                     }
@@ -665,4 +662,5 @@ void markov_correct(float distF, float distL, float distR)
     //estado[0] = estadox;
     //estado[1] = estadoy;
     //estado[2] = estadot;
+    printf("%d celulas visitadas\n",celulas_visitadas);
 }

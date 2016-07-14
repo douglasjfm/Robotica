@@ -98,7 +98,7 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1468507025 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+1468529998 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -233,7 +233,7 @@
 1397211326 /usr/local/include/opencv2/core/core_c.h
 	"opencv2/core/types_c.h"
 
-1468509383 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
+1468532956 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
 	<vector>
 	<math.h>
 	<stdio.h>
@@ -634,7 +634,7 @@
 1446567715 /home/CIN/djfm/Downloads/gsl-2.1/gsl/gsl_minmax.h
 	<gsl/gsl_inline.h>
 
-1468504118 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
+1468528264 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
 	<math.h>
 	<stdio.h>
 	<opencv2/core/core.hpp>
