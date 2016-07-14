@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
         phi = calcphi(estado,cam_pos);
         v_des = vdd;
         om_des=0.5*phi;
-        //printf("%.3f %.3f %.3f\n",estado[0],estado[1],estado[2]);
+        //printf("x = %.3f y = %.3f z = %.3f phi = %.3f\n",estado[0],estado[1],estado[2],phi);
         d=rodasDiff;
         v_r=(v_des-d*om_des);
         v_l=(v_des+d*om_des);
@@ -243,7 +243,7 @@ void* odom(void* arg)
 {
     int clid = clientID, cells,sfails=0,sok=0;
     simxFloat dFiL, dFiR;
-    cells = 0;
+    cells = 1;
     simxFloat detectedPoint[3];
     simxUChar detectionState=1;
     simxReadProximitySensor(clid, sensorFrontHandle, &detectionState, detectedPoint, NULL, NULL, simx_opmode_streaming);

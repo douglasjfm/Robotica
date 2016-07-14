@@ -398,7 +398,7 @@ int actionUpdate(float dl, float dr)
     for (t=0; t<360; t++)
     {
         newTeta = 1;
-        X0.at<float>(0,2) = graus*(pi/180.0);
+        X0.at<float>(0,2) = to180range(graus*(pi/180.0));
         for(x=0; x<NUMBELX; x++)
         {
             for(y=0; y<NUMBELY; y++)
@@ -468,7 +468,7 @@ int actionUpdate(float dl, float dr)
                     }
 
                     //printf("%d %f\n",dtrect_gr,dtrect);
-                    graus2 = (int)(x1min[2]*180.0/pi);
+                    graus2 = grausTo360((int)(x1min[2]*180.0/pi));
                     dtrect_gr = dtrect_gr << 1;
                     for(t1=0; t1<=dtrect_gr; t1++)  //for each new theta
                     {
@@ -480,14 +480,14 @@ int actionUpdate(float dl, float dr)
                                 positionFor(y1,x1,&px1,&py1);
                                 X1.at<float>(0,0) = px1;
                                 X1.at<float>(0,1) = py1;
-                                X1.at<float>(0,2) = graus2*pi/180.0;
+                                X1.at<float>(0,2) = to180range(graus2*pi/180.0);
                                 px1_u1x0 = pTrvGaussian(M, X1, Ep);
                                 sumbel.at<float>(y1,x1,grausTo360(t1)) += blf*px1_u1x0;
                                 sum += blf*px1_u1x0;
                                 cells++;
-//                                if (px1_u1x0>0) {
-//                                    printf("px1_u1x0(%.2f,%.2f,%.2f | %.2f,%.2f,%.2f): p:%f  b:%f pb:%f\n", X1.at<float>(0,0), X1.at<float>(0,1), X1.at<float>(0,2), M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2), px1_u1x0, b, px1_u1x0*b);
-//                                }
+                                if (px1_u1x0>0) {
+                                    printf("px1_u1x0(%.2f,%.2f,%.2f | %.2f,%.2f,%.2f): p:%f  b:%f pb:%f\n", X1.at<float>(0,0), X1.at<float>(0,1), X1.at<float>(0,2), M.at<float>(0,0), M.at<float>(0,1), M.at<float>(0,2), px1_u1x0, blf, px1_u1x0*blf);
+                                }
                             }
                         }
                         graus2 = anthor(graus2);
@@ -501,8 +501,19 @@ int actionUpdate(float dl, float dr)
     {
         bel/sum;
     }
-    //printf("%d updated cells\n",cells);
+    printf("%d updated cells\n",cells);
     return cells;
+}
+
+float tratarDteta(float t, float dt)
+{
+    float r;
+    r = (dt+t);
+    if (r < -pi)
+        r = pi - fabs(r - pi);
+    if (r > pi)
+        r = r - pi - pi;
+    return r;
 }
 
 /*!
@@ -520,7 +531,7 @@ int markov_move(float dwl, float dwr)
 
     estado[0] += ds*cos(dteta+estado[2]);
     estado[1] += ds*sin(dteta+estado[2]);
-    estado[2] += dteta;// to180range(estado[2] + dteta);
+    estado[2] = tratarDteta(estado[2],dteta);// to180range(estado[2] + dteta);
 
     dl = prevdl = prevdl + dl;
     dr = prevdr = prevdr + dr;
@@ -577,15 +588,15 @@ void robotToSensorPoint(float *pRobot, float *pSensor, float dist, float* point)
     robotToWorld(pSR, pRobot, point);
 }
 
-/*! Markov Update Action*/
+/*! Markov Update Perception*/
 void markov_correct(float distF, float distL, float distR)
 {
     float robotPos[3]; //[x,y,theta]
     int x,y,t,graus=0,g15;
     float sensorPoint[3], mapPoint[3];
     float p, sum=0,b,mp=0.0,estadox = estado[0],estadoy=estado[1],estadot=estado[2];
-printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
-printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
+//printf("L = %.2f F = %.2f R = %.2f\n",distL,distF,distR);
+//printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
     for(x=0; x<cellx; x++)
     {
         for(y=0; y<celly; y++)
@@ -629,7 +640,7 @@ printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
                         sensorDr = grausTo360(anthor(sensorDr));
                         if (d<dR && d>0.0) dR=d;
                     }
-                    dF = pGaussian(distF-dF, SONAR_SIGMA, res);
+                    dF = pGaussian(distF-dF, 2*SONAR_SIGMA, res);
                     dL = pGaussian(distL-dL, SONAR_SIGMA, res);
                     dR = pGaussian(distR-dR, SONAR_SIGMA, res);
                     p = dF*dL*dR*b;
@@ -641,7 +652,8 @@ printf("x = %.2f y = %.2f t = %.2f\n",estado[0],estado[1],estado[2]);
                         estadox = robotPos[0];
                         estadoy = robotPos[1];
                         estadot = robotPos[2];
-                        printf("x = %.2f y = %.2f t = %.2f\n",estadox,estadoy,estadot);
+                        printf("F = %.2f L = %.2f R = %.3f\n",distF,distL,distR);
+                        printf("x = %.2f y = %.2f t = %.3f\n",estadox,estadoy,estadot);
                         mp = p;
                     }
                 }
