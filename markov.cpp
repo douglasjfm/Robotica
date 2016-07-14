@@ -196,9 +196,9 @@ void markov_load()
                 g0 = i;
                 g1 = i+90;
                 g2 = i+270;
-                dist[i].s0.at<float>(k,j) = colisao(xc,yc,g0,&mapmodel);
-                dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);
-                dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);
+                dist[i].s0.at<float>(k,j) = colisao(xc,yc,g0,&mapmodel);///sensorF
+                dist[i].s1.at<float>(k,j) = colisao(xc,yc,g1,&mapmodel);///sensorL
+                dist[i].s2.at<float>(k,j) = colisao(xc,yc,g2,&mapmodel);///sensorR
             }
         g0 = anthor(g0);
         g1 = anthor(g1);
@@ -508,9 +508,9 @@ int actionUpdate(float dl, float dr)
 /*!
    Markov Action Update
 */
-int markov_move(float dwl, float dwr)
+int markov_move(double dwl, double dwr)
 {
-    static float prevdl = 0.0, prevdr = 0.0;
+    static double prevdl = 0.0, prevdr = 0.0;
     float ds,dl = dwl*rodaRaio, dr = dwr*rodaRaio;
     float dteta;
     //int g,a,b,sigx,sigy;

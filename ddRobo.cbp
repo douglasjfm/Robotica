@@ -32,6 +32,7 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 			<Add directory="../../Documents/opencv_inst/include" />
+			<Add directory="robotAPI" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
@@ -106,6 +107,7 @@
 			<Add library="../../Documents/opencv_inst/lib/libopencv_video_pch_dephelp.a" />
 			<Add library="../../Documents/opencv_inst/lib/libopencv_videostab.so" />
 			<Add library="../../Documents/opencv_inst/lib/libopencv_videostab_pch_dephelp.a" />
+			<Add library="libs/libwiringPi.a" />
 			<Add directory="../../Documents/gsl_inst/lib" />
 			<Add directory="../../Documents/opencv_inst/lib" />
 		</Linker>
@@ -118,6 +120,15 @@
 		<Unit filename="remoteApi/extApiPlatform.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="robotAPI/Encoder.cpp" />
+		<Unit filename="robotAPI/KBAsync.cpp" />
+		<Unit filename="robotAPI/MotionControl.cpp" />
+		<Unit filename="robotAPI/Motor.cpp" />
+		<Unit filename="robotAPI/Odometry.cpp" />
+		<Unit filename="robotAPI/PIDController.cpp" />
+		<Unit filename="robotAPI/Pins.cpp" />
+		<Unit filename="robotAPI/RobotTimer.cpp" />
+		<Unit filename="robotAPI/Sonar.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

@@ -65,25 +65,25 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1468244921 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
+1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.c
 	"extApi.h"
 	"extApiInternal.h"
 	<stdio.h>
 	"extApiJava.h"
 
-1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApi.h
 	"extApiPlatform.h"
 	"../include/v_repConst.h"
 
-1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.h
 	<stdint.h>
 
-1468244921 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/include/v_repConst.h
 
-1468244921 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
+1467988945 /home/CIN/djfm/Desktop/Robotica/remoteApi/extApiInternal.h
 	"extApiPlatform.h"
 
-1468244921 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
+1467988945 source:/home/CIN/djfm/Desktop/Robotica/remoteApi/extApiPlatform.c
 	"extApiPlatform.h"
 	<stdio.h>
 	<Windows.h>
@@ -98,7 +98,17 @@
 	<arpa/inet.h>
 	<netdb.h>
 
-1468352645 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+1468416388 source:/home/CIN/djfm/Desktop/Robotica/ddRobot.cpp
+	<iostream>
+	<signal.h>
+	<sstream>
+	<wiringPi.h>
+	"robotAPI/Pins.h"
+	"robotAPI/Sonar.h"
+	"robotAPI/Motor.h"
+	"robotAPI/Encoder.h"
+	"robotAPI/KBAsync.h"
+	"robotAPI/Odometry.h"
 	<stdio.h>
 	<stdlib.h>
 	<math.h>
@@ -106,9 +116,6 @@
 	<unistd.h>
 	<time.h>
 	<pthread.h>
-	"remoteApi/extApi.h"
-	"include/v_repConst.h"
-	"remoteApi/extApiPlatform.h"
 
 1460855268 source:/home/douglas/Documentos/robotica/Atividade1/ddRobo/kinem.cpp
 	<math.h>
@@ -233,7 +240,7 @@
 1397211326 /usr/local/include/opencv2/core/core_c.h
 	"opencv2/core/types_c.h"
 
-1468349727 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
+1468415547 source:/home/CIN/djfm/Desktop/Robotica/markov.cpp
 	<vector>
 	<math.h>
 	<stdio.h>
@@ -634,7 +641,7 @@
 1446567715 /home/CIN/djfm/Downloads/gsl-2.1/gsl/gsl_minmax.h
 	<gsl/gsl_inline.h>
 
-1468257559 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/kinem.cpp
 	<math.h>
 	<stdio.h>
 	<opencv2/core/core.hpp>
@@ -1085,4 +1092,99 @@
 
 1461162079 /home/CIN/djfm/Documents/opencv_inst/include/opencv2/core/core_c.h
 	"opencv2/core/types_c.h"
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/wiringPi.h
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/Pins.h
+	<wiringPi.h>
+	<string>
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/Sonar.h
+	"Pins.h"
+	<wiringPi.h>
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/Motor.h
+	"Encoder.h"
+	"RobotTimer.h"
+	"PIDController.h"
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/Encoder.h
+	"RobotTimer.h"
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/RobotTimer.h
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/PIDController.h
+	<limits>
+	<algorithm>
+	<iostream>
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/KBAsync.h
+	<termios.h>
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/Odometry.h
+	"Encoder.h"
+	<vector>
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/Encoder.cpp
+	<stdlib.h>
+	"Encoder.h"
+	"Pins.h"
+	"RobotTimer.h"
+	<wiringPi.h>
+	<math.h>
+	<sstream>
+	<iostream>
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/KBAsync.cpp
+	<stdlib.h>
+	<string.h>
+	<unistd.h>
+	<sys/select.h>
+	<termios.h>
+	"KBAsync.h"
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/MotionControl.cpp
+	<iostream>
+	"MotionControl.h"
+	<math.h>
+
+1468414118 /home/CIN/djfm/Desktop/Robotica/robotAPI/MotionControl.h
+	<vector>
+	"Odometry.h"
+	"Motor.h"
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/Motor.cpp
+	"Motor.h"
+	"Pins.h"
+	"RobotTimer.h"
+	<wiringPi.h>
+	<iostream>
+	<math.h>
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/Odometry.cpp
+	"Odometry.h"
+	<math.h>
+	<iostream>
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/PIDController.cpp
+	"PIDController.h"
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/Pins.cpp
+	"Pins.h"
+	<sstream>
+	<stdlib.h>
+	<iostream>
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/RobotTimer.cpp
+	<sys/time.h>
+	"RobotTimer.h"
+
+1468414118 source:/home/CIN/djfm/Desktop/Robotica/robotAPI/Sonar.cpp
+	"Sonar.h"
+	"RobotTimer.h"
+	<stdlib.h>
+	<wiringPi.h>
+	<sstream>
+	<iostream>
+	<errno.h>
 
